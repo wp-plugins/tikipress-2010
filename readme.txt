@@ -1,16 +1,19 @@
 === TikiPress ===
 
-Contributors: GetShopped.org (need to add eventpress etc in here)
-Tags: e-commerce, shop, cart, goldcart, buddypress, Tickets, event Manager
-Version: 1.0 - Beta
+Contributors: GetShopped.org, Paul Gibbs
+Tags: e-commerce, shop, cart, goldcart, buddypress, Tickets, Event Manager
+Version: 0.1
 Tested up to: 3.0
-Requires at least: WP-e-commerce 3.7, The latest version of buddypress custom post types (version 0.1.2.1), EventPress Version 0.1.2.2
-Stable tag: 3.7.6.7
+Requires at least: WP-e-commerce 3.7.7, The latest version of buddypress custom post types (version 0.1.2.1), EventPress Version 0.1.2.2
+Stable tag: 1.0
 
 == Description ==
 
 This plugin allows you to create events, tickets as products, attendees everything you need to organize events.
 This version is in beta mode so please report any bugs or suggestions to the getshopped.org blog.
+
+Note: This plugin requires the latest versions of each of these other plugins to run: WP-e-Commerce, EventPress, BuddyPress, BuddyPress Custom post types.
+
 
 == Installation ==
 
@@ -23,7 +26,7 @@ All of these plugins install into the wp-content/plugins directory and should be
 For best results you should install the plugins in this order: buddypress, buddypress custom post types, eventPress, wp-e-commerce, TikiPress.
 
 
-==== Downloading a new version ====
+== Downloading a new version ==
 
 This plugin currently does not have automatic plugin notification, however any premium upgrades for GetShopped.org can be downloaded from:
 
@@ -48,7 +51,7 @@ Please Note: that we will do our best to assist you with any problems relating t
 ==Getting started with this plugin==
 
 
-==== Important things to note / required settings ====
+== Important things to note / required settings ==
 Below are the minimum required settings for all these plugins to work nicely please take the time to read and configure them.
 
 1. For this to work you must set your permalink structure to /%category%/%postname%/
@@ -70,21 +73,21 @@ where product id is the product id for the ticket thats the event relates to. (a
 7. The Redeem page for ticket codes is also a short code so you will need to include this on a page also: [bpt_redeem_code_page]
 
 
-==== Setting up the events (EventPress)====
+== Setting up the events (EventPress)==
  
 1. Go to Events and add a new event, this is the event that you are going to be selling a ticket for.
 
 The Registration metaboxes on this page are not used by TikiPress. TikiPress will deal with all the registrations / attendees so you can disregard this section.
 
 
-==== Setting up BuddyPress and Ticket Checkout Fields ====
+== Setting up BuddyPress and Ticket Checkout Fields ==
 
 The BuddyPress fields determine what attendee data is collected for your event. The user buying the tickets at checkout will fill these out with their purchase. If more than one ticket is purchased then the person who gets emailed the redemption code will also be asked to fill out the same fields
 
 1.(optional) Go to BuddyPress -> Profile Field Setup and add any fields you want. Values of Radio buttons and Drop-down lists will be shown in statistics, other information will be show per user.
 
 
-==== Creating a Ticket - product ====
+== Creating a Ticket - product ==
 
 This is the ticket that you are going to be selling for the event you have just created.
 
@@ -96,7 +99,7 @@ This is the ticket that you are going to be selling for the event you have just 
 
 4. If you want the tickets sold / reaming stock counter to work you must set a ticket limit for your product. To do this just select the options "I have limited quantities of this stock" Under stock control metabox.
 
-===Testing this out ===
+==Testing this out ==
 
 1. Go to front-end Products page
 
