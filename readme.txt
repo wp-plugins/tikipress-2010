@@ -2,10 +2,10 @@
 
 Contributors: GetShopped.org, Paul Gibbs
 Tags: e-commerce, shop, cart, goldcart, buddypress, Tickets, Event Manager
-Version: 0.1
-Tested up to: 3.0
+Version: 1.1
+Tested up to: 3.03
 Requires at least: WP-e-commerce 3.7.7, The latest version of buddypress custom post types (version 0.1.2.1), EventPress Version 0.1.2.2
-Stable tag: 1.0
+Stable tag: 1.1
 
 == Description ==
 

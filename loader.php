@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: TikiPress
-Version: 1.0
+Version: 1.1
 Requires at least: WP 3.0, BuddyPress 1.2.5
 Tested up to: WP 3.0, BuddyPress 1.2.6
 Author: Getshopped.org, Paul Gibbs
