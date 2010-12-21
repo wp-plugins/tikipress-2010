@@ -1,0 +1,69 @@
+#bpt-admin-metaboxes-general div.setting-group:last-child { margin-bottom: 0 };
+#bpt-admin-metaboxes-general div.setting:after { content: "."; display: block; height: 0; clear: both; visibility: hidden; }
+#bpt-admin-metaboxes-general div.setting p { margin-top: 0px; }
+#bpt-admin-metaboxes-general div.settingname { float: left; width: 50%; margin-right: 6px; }
+#bpt-admin-metaboxes-general div.settingvalue { float: left; width: 48%; }
+
+#bpt-admin-metaboxes-general div.settingvalue > div { margin-bottom: 30px; }
+#bpt-admin-metaboxes-general div.settingvalue > div:last-child { margin-bottom: 0; }
+
+#bpt-admin-metaboxes-general div.setting-easycheckout { margin-top: 8px; }
+#bpt-admin-metaboxes-general div.wide div.settingname { clear: left; }
+#bpt-admin-metaboxes-general div.wide div.settingvalue, #bpt-admin-metaboxes-general div.wide div.settingname { width: 98%; margin-left: 6px; }
+
+#bpt-admin-metaboxes-general textarea, #bpt-admin-metaboxes-general select, #bpt-admin-metaboxes-general input[type="text"] { width: 100%; }
+#bpt-admin-metaboxes-general textarea { height: 128px; }
+#bpt-admin-metaboxes-general select[multiple="multiple"] { height: 96px; }
+
+#poststuff .inside, #poststuff .inside p { font-size: 12px; }
+#bpt-admin-metaboxes-general span.ampersand { font-family: Baskerville, Palatino, "Palatino Linotype", Constantia, "Book Antiqua", serif; font-style: italic; font-size: 1.1em; }
+div.bpt-spacer { border-top: 1px solid #f0f0f0; padding-bottom: 12px; }
+#bp-admin-nav li.current a { color: #888; text-decoration: none; }
+div.metabox-prefs dt { font-style: italic; }
+div.metabox-holder { padding-top: 0 !important; }
+
+td.badges_pdf{
+	padding: 6px;
+}
+
+.float_left{
+	float:left;
+	width:380px;
+	padding:20px;
+}
+
+#badges_options {
+padding-right:20px;
+width:560px;
+}
+
+.float_left_img{
+padding-top: 110px;
+float:left;
+width:380px;
+
+}
+
+#attendeeGraph img {
+
+border: 1px solid #ccc;
+padding: 5px;
+background: #eee;
+}
+
+#attendeeGraph {
+width: 40%;
+padding-top: 15px;
+float: left;
+margin-left: 30px;
+}
+
+#help {
+width: 60%;
+}
+
+.left{
+	float:left;
+	width:40%;
+	padding:20px;
+}

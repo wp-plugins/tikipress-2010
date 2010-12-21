@@ -1,0 +1,96 @@
+/* This css is only for the attendee shortcode page - you can put other css here but it gets called on everypage so be careful! */
+#content div.attendee img {
+float:left;
+margin-bottom:0;
+margin-left:0;
+margin-right:6px;
+margin-top:0;
+padding-bottom:2px;
+padding-left:2px;
+padding-right:2px;
+padding-top:2px;
+vertical-align:middle;
+}
+
+div.attendee img {
+-moz-background-clip:border;
+-moz-background-inline-policy:continuous;
+-moz-background-origin:padding;
+-moz-background-size:auto auto;
+background-attachment:scroll;
+background-color:#F7F7F7;
+background-image:none;
+background-position:0 0;
+background-repeat:repeat;
+border-bottom-color:#DFDFDF;
+border-bottom-style:solid;
+border-bottom-width:1px;
+border-left-color-ltr-source:physical;
+border-left-color-rtl-source:physical;
+border-left-color-value:#DFDFDF;
+border-left-style-ltr-source:physical;
+border-left-style-rtl-source:physical;
+border-left-style-value:solid;
+border-left-width-ltr-source:physical;
+border-left-width-rtl-source:physical;
+border-left-width-value:1px;
+border-right-color-ltr-source:physical;
+border-right-color-rtl-source:physical;
+border-right-color-value:#DFDFDF;
+border-right-style-ltr-source:physical;
+border-right-style-rtl-source:physical;
+border-right-style-value:solid;
+border-right-width-ltr-source:physical;
+border-right-width-rtl-source:physical;
+border-right-width-value:1px;
+border-top-color:#DFDFDF;
+border-top-style:solid;
+border-top-width:1px;
+float:left;
+margin-right:6px;
+vertical-align:middle;
+}
+
+#content div.attendee {
+border-bottom-color:#EAEAEA;
+border-bottom-style:solid;
+border-bottom-width:1px;
+float:left;
+font-size:12px;
+height:58px;
+list-style-image:none;
+list-style-position:outside;
+list-style-type:none;
+margin-bottom:0;
+margin-left:0;
+margin-right:0;
+margin-top:0;
+padding-bottom:0;
+padding-left:0;
+padding-right:0;
+padding-top:4px;
+width:50%;
+}
+
+div.attendee {
+font-size:12px;
+list-style-image:none;
+list-style-position:outside;
+list-style-type:none;
+}
+
+img.avatar {
+margin-right: 5px;
+}
+
+#content div.attendee {
+font-size:12px;
+list-style-image:none;
+list-style-position:outside;
+list-style-type:none;
+}
+
+div.attendee h4 {
+margin-bottom:4px;
+margin-top:0;
+}
