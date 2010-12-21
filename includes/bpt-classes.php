@@ -20,13 +20,7 @@ function bpt_is_ticket_code_valid( $code ) {
 	return apply_filters( 'bpt_is_ticket_code_valid', $purchase_id );
 }
 
-//this function is used to return the purchase ID that is attached to the end of the ticket redemption code.
-/*
-function bpt_get_purchase_ID(){
-
-}
-*/
-
+//gets the users tikipress feilds
 function bpt_get_users_profile_data($user_id){
 	global $wpdb;
 	$sql =$wpdb->prepare('SELECT `field_id` , `value` FROM `'.$wpdb->prefix.'bp_xprofile_data` WHERE `user_id` = '.$user_id);
@@ -51,6 +45,7 @@ function bpt_wpsc_get_product_meta( $product_id, $meta_key ) {
 	return apply_filters( 'bpt_wpsc_get_product_meta', maybe_unserialize( $wpdb->get_var( $sql ) ), $product_id, $meta_key );
 }
 
+//returns the product id (ticket product) when we know the eventid
 function bpt_wpsc_get_product_id_from_event( $event_id) {
 	global $wpdb;
 
@@ -67,10 +62,15 @@ function bpt_wpsc_get_product_id_from_event( $event_id) {
 function bpt_wpsc_get_categories() {
 	global $wpdb;
 
-	$sql = "SELECT `id`, `name` FROM `" . WPSC_TABLE_PRODUCT_CATEGORIES . "` WHERE `active`='1'";
+	if((float)WPSC_VERSION >= 3.8 ){
+	$sql = "SELECT wp_terms.name, wp_terms.term_id FROM wp_term_taxonomy LEFT JOIN wp_terms ON wp_term_taxonomy.term_id = wp_terms.term_id WHERE wp_term_taxonomy.taxonomy = 'wpsc_product_category'";
+	}else {
+		$sql = "SELECT `id`, `name` FROM `" . WPSC_TABLE_PRODUCT_CATEGORIES . "` WHERE `active`='1'";
+	}
 	return apply_filters( 'bpt_wpsc_get_categories', $wpdb->get_results( $sql, ARRAY_A ) );
 }
 
+//Returns ticket name for use in the emails
 function bpt_get_product_name( $purchase_id ) {
 	global $wpdb;
 
@@ -78,6 +78,7 @@ function bpt_get_product_name( $purchase_id ) {
 	return apply_filters( 'bpt_get_product_name', $wpdb->get_var( $sql ), $purchase_id );
 }
 
+//get the product id from the purchase id
 function bpt_get_product_id( $purchase_id ) {
 	global $wpdb;
 
@@ -85,6 +86,7 @@ function bpt_get_product_id( $purchase_id ) {
 	return apply_filters( 'bpt_get_product_name', $wpdb->get_var( $sql ), $purchase_id );
 }
 
+//used to select users that have registered their ticket details
 function bpt_get_registered_users($product_id, $id_only=false){
 	global $wpdb;
 	$tickets=array();
@@ -135,10 +137,8 @@ include_once( WPSC_FILE_PATH . '/wpsc-includes/fpdf/fpdf.php' );
 class PDF extends FPDF
 {
 	var $bpt_data;
-	
-	//Load data
-	
 
+//is required compaires the post array with all the possible options for badges and returns an array 1-7 of the selected option ids this can then be used to load the matching user data
 	function isRequired($arr1, $arr2){
 		$requiredItems = $arr1['bpt']['fields'];
 		//echo '<pre>' . print_r ($requiredItems,1) . '</pre>';
@@ -153,8 +153,10 @@ class PDF extends FPDF
 
 function LoadBadgesData($settings){
 	global $wpdb;
+/*commenting this out as it will break - incompleted code
 	if ($_POST['fUpload'])
 		$this->upload_logo();
+*/
 	//echo('<pre>'.print_r($_POST,1).'</pre>');
 	$event_id = $_POST['events_dropdown'];
 	$product_id = bpt_wpsc_get_product_id_from_event($event_id);
@@ -168,12 +170,13 @@ function LoadBadgesData($settings){
 		$twitter_id = '';
 		$user = get_userdata($user_id);
 		$user_email = $user->user_email;
+		//set up default aray 7 badge template areas array7 is just for the email address.
 		$user_data = array(0=>'',1=>'',2=>'',3=>'',4=>'',5=>'',6=>'',7=>'');
 		$field_data = bpt_get_users_profile_data($user_id);
 		
 		
 		
-	/* connect to gravatar to get the user site address, twitter id and avatar */
+	/* connect to gravatar to get the user site address, twitter id*/
 
 		$usermd5=md5( strtolower( trim( $user->user_email ) ) );	
 		$old_track = ini_set('track_errors', '1');
@@ -228,7 +231,7 @@ function LoadBadgesData($settings){
 	}
 	return $users_data;
 }
-	
+//loads the pdf data for the attendee infomation	
 function LoadData( $settings)
 	{
 		global $wpdb;
@@ -273,7 +276,7 @@ function LoadData( $settings)
 	    $width=floor(250 / count($header));
 	    for($i=0;$i<count($header);$i++){
 	    
-	      $this->SetY($y); //set pointer back to previous values
+	      		$this->SetY($y); //set pointer back to previous values
 				$this->SetX($x);
 				$x=$this->GetX()+$width;
 				$y=$this->GetY();
@@ -284,7 +287,7 @@ function LoadData( $settings)
 	    }
 	}
 
-
+/* do the same check for footer - we don't want this on our badges! */
 	function Footer(){
 		if ($header=$this->bpt_data['headers']){
 		     //Colors, line width and bold font
@@ -314,9 +317,7 @@ function LoadData( $settings)
 	function PrintTable()
 	{
 		global $wpdb;
-		
-		
-		 
+	
 	    $width=floor(250 / count($this->bpt_data['headers']));
 	    //Color and font restoration
 	    $this->SetFillColor(224);
@@ -324,12 +325,10 @@ function LoadData( $settings)
 	    $this->SetFont('','','8');
 	    //Data
 	    $fill=false;
-	 //exit('<pre>'.print_r($this->bpt_data,true) . '</pre>');
+	 	//exit('<pre>'.print_r($this->bpt_data,true) . '</pre>');
 		$x = $this->GetX();
 		$y = $this->GetY();
 		$leftMargin = $x;
-		
-		
 		//row
 	    foreach((array)$this->bpt_data['users'] as $user)
 	    {	

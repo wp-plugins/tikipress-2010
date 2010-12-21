@@ -15,6 +15,7 @@ function bpt_is_member_tickets_page() {
 // Convenience
 
 function bpt_get_ticketing_category() {
+
 	$settings = maybe_unserialize( get_blog_option( BP_ROOT_BLOG, 'bpt' ) );
 	return apply_filters( 'bpt_get_ticketing_category', $settings['ticket_category'] );
 }

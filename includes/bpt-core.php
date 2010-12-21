@@ -4,8 +4,10 @@ define ( 'BPT_VERSION', '0.1' );
 
 load_plugin_textdomain( 'bpt', false, '/bp-ticketing/includes/languages/' );
 
-if ( !class_exists( 'WPSC_Query' ) )
+
+if ( !class_exists( 'WPSC_Query' ) && ((float)WPSC_VERSION < 3.8 ))
 	return;
+
 
 if ( !defined( 'BPT_TICKETS_SLUG' ) )
 	define ( 'BPT_TICKETS_SLUG', __( 'tickets', 'bpt' ) );
@@ -61,7 +63,17 @@ function bpt_is_wpsc_active() {
  * This function will add a WordPress wp-admin admin menu for your component under the
  * "BuddyPress" menu.
  */
-function bpt_add_admin_menu() {
+ 
+/*
+ 	function bpt_add_pages() {
+		if ( is_admin() ) {
+			add_filter( 'wpsc_additional_pages', 'bpt_add_admin_menu',10,2 );
+		}	
+	}
+	add_action( 'init','bpt_add_pages' ); 
+*/
+	
+function bpt_add_admin_menu($page_hooks, $base_page) {
 	global $bp, $menu;
 
 	if ( !$bp->loggedin_user->is_site_admin || !bpt_is_wpsc_active() )
@@ -69,11 +81,12 @@ function bpt_add_admin_menu() {
 
 	require_once( dirname( __FILE__ ) . '/bpt-admin.php' );
 
-	add_action( 'load-store_page_wpsc-buddypressticketing', 'bpt_admin_pages_on_load' );
+	add_action( 'admin_init', 'bpt_admin_pages_on_load' );
 	add_action( 'admin_init', 'bpt_admin_register_settings' );
-	add_submenu_page( 'wpsc-sales-logs', __( 'Ticketing Settings', 'bpt' ), __( '-TikiPress', 'bpt' ), 'manage_options', 'wpsc-buddypressticketing', 'bpt_admin' );
+	$page_hooks[] = add_submenu_page( $base_page, __( 'Ticketing Settings', 'wpsc' ), __( '-TikiPress', 'wpsc' ), 'manage_options', 'wpsc-buddypressticketing', 'bpt_admin' );
+return $page_hooks;
 }
-add_action( 'admin_menu', 'bpt_add_admin_menu', 11 );  /* wpsc_admin_pages = 10 */
+add_filter( 'wpsc_additional_pages', 'bpt_add_admin_menu',10,2 ); /* wpsc_admin_pages = 10 */
 
 /**
  * bpt_load_template_filter()
@@ -195,12 +208,10 @@ function bpt_screen_redeem() {
  */
 
 function bpt_extend_checkout_form() {
-	global $bpt_errors, $wpsc_cart;
-
-	$is_a_ticket_sale = false;
+global $bpt_errors, $wpsc_cart;
 	$ticketing_category = bpt_get_ticketing_category();
-
-
+	$is_a_ticket_sale = false;
+	
 	while ( wpsc_have_cart_items() ) {
 		wpsc_the_cart_item();
 
@@ -614,7 +625,7 @@ function bpt_attendees($atts) {
 	if($id==0)
 		return "No Attendees so far. (Event id can not be 0)";
 	$users = bpt_get_registered_users($id);
-	///$users is empty and not coming through $id product id? or event id?
+
 	if(!$users)
 		return "No Attendees so far.";
 	$output = "";
@@ -632,18 +643,18 @@ foreach ($users as $user){
 	}
 	ini_set('track_errors', $old_track);
 	
-	//if ( is_array( $profile ) && isset( $profile['entry'] ) )
-	//	echo $profile['entry'][0]['displayName'];
-	
-	
-	$url=($url)?$url:$profile['entry'][0]['urls'][0]['value'];
-	
+	if(isset($url) && $url != '')
+		$url = $url;
+	elseif('User not found' != $profile)
+		$url = $profile['entry'][0]['urls'][0]['value'];
+
+		
 	$output.="<div class='attendee'><h4><a href='".$url."' rel='nofollow'> <img alt='' src='http://www.gravatar.com/avatar/".$usermd5."?s=42' class='avatar avatar-42 photo' height='42' width='42' />".$user->display_name."</a></h4>";
 	
 	if($url)
 		$output.="<p><a href='".$url."' rel='nofollow' style='text-decoration: none; color: #aaa;'>".$url."</a></p>";
 	
-	else{
+	elseif('User not found' != $profile){
 	foreach((array)$profile['entry'][0]['accounts'] as $account){
 		if($account["domain"]=="twitter.com")
 		$output .= "<p><a href='".$account["url"]."' rel='nofollow' style='text-decoration: none; color: #aaa;'>".$account["display"]."</a></p><br />";
@@ -1030,7 +1041,12 @@ function bpt_send_redeem_vouchers( $sale_data ) {
 		$product_name = bpt_get_product_name( $sale_id );
 		foreach( (array)$codes as $code ){
 			wpsc_update_meta( bpt_get_product_id($sale_id), $code['email'], $code['code'], 'bp_ticketing' );
-			$message = sprintf( "Hello! Someone's bought you a ticket for %s. You Will need to register to claim this ticket. If your already a member and this is the registered email address for the account then please enter the following code into the Redeem Ticket page at %s. Code: %s. If you are not a member you will need to sign up using this email address so your ticket can be validated.", $product_name, site_url(), $code['code'] );
+			$message = sprintf( 
+			"Hello! Someone's bought you a ticket for %s.
+			You Will need to register to claim this ticket. If your already a member and this is the registered email address for the account then please enter the following code into the
+			Redeem Ticket page at: %s.
+			
+			Your redeem code is: %s. If you are not a member you will need to sign up using this email address so your ticket can be validated.", $product_name, home_url(), $code['code'] );
 			$email = array( 'to' => $code['email'],
 							'subject' => sprintf( __( "%s - redemption code", 'bpt' ), $product_name ),
 							'message' => $message );

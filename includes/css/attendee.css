@@ -1,3 +1,4 @@
+/* This css is only for the attendee shortcode page - you can put other css here but it gets called on everypage so be careful! */
 #content div.attendee img {
 float:left;
 margin-bottom:0;
