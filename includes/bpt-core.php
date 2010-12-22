@@ -684,11 +684,15 @@ function bpt_buy_now($output, $user_status){
 	$query = $wpdb->get_results("SELECT post_id FROM wp_postmeta WHERE meta_key='_bpt_event_prod_id' and meta_value = $post_id;",ARRAY_N);
 	$product_id = $query[0][0];
 	
-	
-	$wpsc_query = new WPSC_query(array('product_id'=>$product_id));
-	while (wpsc_have_products()) :  wpsc_the_product();
-	$product_url=wpsc_the_product_permalink();
-	endwhile;
+	if((float)WPSC_VERSION >= 3.8 ){
+			$product_url = get_permalink($product_id);
+		 }else{
+			$wpsc_query = new WPSC_query(array('product_id'=>$product_id));
+			while (wpsc_have_products()) :  wpsc_the_product();
+			$product_url=wpsc_the_product_permalink();
+			endwhile;
+		}
+
 	
 	if ( ep_registration_open() ) {
 		$userid = bp_loggedin_user_id();
