@@ -1,6 +1,6 @@
 === TikiPress ===
 
-Contributors: GetShopped.org, Paul Gibbs
+Contributors: DJPaul, Mychelle, valentinas, jghazally, GetShopped.org
 Tags: e-commerce, shop, cart, goldcart, buddypress, Tickets, Event Manager
 Version: 1.1
 Tested up to: 3.03
