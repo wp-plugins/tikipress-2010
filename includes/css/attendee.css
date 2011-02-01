@@ -1,9 +1,36 @@
 /* This css is only for the attendee shortcode page - you can put other css here but it gets called on everypage so be careful! */
+fieldset.wpsc_registration_form{
+width:150px;
+}
+
+fieldset.wpsc_registration_form input#wp-submit{
+width:100px;
+}
+/* Redeem ticket page */
+#sidebar-login-form{
+width:200px;
+padding-top: 20px;
+}
+#bpt_redeem_join{
+margin-right: 60px;
+padding-top: 20px;
+width: 60%;
+float:left;
+
+}
+#bpt_redeem_login{
+	float:left;
+}
+.small{
+	font-size: 16px;
+	font-weight: 100;
+}
+/* Redeem ticket page ends */
 #content div.attendee img {
 float:left;
 margin-bottom:0;
 margin-left:0;
-margin-right:6px;
+margin-right:15px;
 margin-top:0;
 padding-bottom:2px;
 padding-left:2px;
@@ -18,16 +45,16 @@ div.attendee img {
 -moz-background-origin:padding;
 -moz-background-size:auto auto;
 background-attachment:scroll;
-background-color:#F7F7F7;
+background-color:#339999;
 background-image:none;
 background-position:0 0;
 background-repeat:repeat;
-border-bottom-color:#DFDFDF;
+border-bottom-color:#339999;
 border-bottom-style:solid;
 border-bottom-width:1px;
 border-left-color-ltr-source:physical;
 border-left-color-rtl-source:physical;
-border-left-color-value:#DFDFDF;
+border-left-color-value:#339999;
 border-left-style-ltr-source:physical;
 border-left-style-rtl-source:physical;
 border-left-style-value:solid;
@@ -36,25 +63,22 @@ border-left-width-rtl-source:physical;
 border-left-width-value:1px;
 border-right-color-ltr-source:physical;
 border-right-color-rtl-source:physical;
-border-right-color-value:#DFDFDF;
+border-right-color-value:#339999;
 border-right-style-ltr-source:physical;
 border-right-style-rtl-source:physical;
 border-right-style-value:solid;
 border-right-width-ltr-source:physical;
 border-right-width-rtl-source:physical;
 border-right-width-value:1px;
-border-top-color:#DFDFDF;
+border-top-color:#339999;
 border-top-style:solid;
 border-top-width:1px;
 float:left;
-margin-right:6px;
+margin-right:15px;
 vertical-align:middle;
 }
 
 #content div.attendee {
-border-bottom-color:#EAEAEA;
-border-bottom-style:solid;
-border-bottom-width:1px;
 float:left;
 font-size:12px;
 height:58px;
@@ -73,24 +97,29 @@ width:50%;
 }
 
 div.attendee {
-font-size:12px;
+font-size:16px;
 list-style-image:none;
 list-style-position:outside;
 list-style-type:none;
+
 }
 
 img.avatar {
-margin-right: 5px;
+margin-right: 15px;
+margin-top: 9px;
 }
 
 #content div.attendee {
-font-size:12px;
+font-size:16px;
 list-style-image:none;
 list-style-position:outside;
 list-style-type:none;
 }
 
 div.attendee h4 {
-margin-bottom:4px;
+margin-bottom:-10px;
 margin-top:0;
+}
+div.attendee h4 a{
+color:#339999;
 }

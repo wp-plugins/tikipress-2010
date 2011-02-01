@@ -67,3 +67,23 @@ width: 60%;
 	width:40%;
 	padding:20px;
 }
+
+/*
+Dashboard Widget CSS
+*/
+#bpt_dashboard_info{
+float:left;
+Width:50%;
+}
+
+#bpt_dashboard_graph{
+float:left;
+width:50%;
+}
+
+.btp_dashboard_stat{
+margin-bottom: 5px;
+margin-top: 8px;
+display: block;
+}
+

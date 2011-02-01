@@ -23,6 +23,55 @@ function bpt_admin_pages_on_load() {
 }
 
 
+// Dashboard Widget for ticket sales
+
+function bpt_ticket_sales_dashboard_widget() {
+	$url ='/wp-admin/';
+	$admin_url= get_admin_url();
+	
+echo '<div id="bpt_dashboard_info">';
+		$product_id = bpt_select_event_dropdown($url);
+		$users = bpt_get_registered_users( $product_id, true ); 
+		
+		if((float)WPSC_VERSION >= 3.8 )
+			$ticket_total = get_post_meta($product_id, '_wpsc_stock', true); 
+		else{
+			$sql=  'SELECT `quantity` FROM `'.$wpdb->prefix . 'wpsc_product_list` WHERE `id` = '.$product_id[0];
+			$ticket_total = $wpdb->get_results( $sql ) ;
+			$ticket_total = $ticket_total[0]->quantity;
+		}
+		
+		$tickets_sold = bpt_get_quantities_sold($product_id);
+		$remaining_tickets = ($ticket_total - $tickets_sold);
+		
+		echo '<br /><br /><span class="btp_dashboard_stat"><strong> Total Tickets: </strong>' . $ticket_total . '</span>';
+		echo '<span class="btp_dashboard_stat"><strong>Total Attendees so far: </strong>' . $tickets_sold . '</span>';
+		echo '<span class="btp_dashboard_stat"><strong>Tickets Remaining: </strong>' . $remaining_tickets . '</span><br /><br />';
+		echo '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing&tab=attendees">See a List of Event Attendee\'s</a></span>';
+		echo '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing">See All Event Statistics</a></span>'; 
+echo'</div>';
+	
+echo'<div id="bpt_dashboard_graph">';
+	echo '<div id="attendeeGraph">';
+		echo '<img src="http://chart.apis.google.com/chart?chs=300x150&cht=p3&chd=t:'.number_format($tickets_sold/1000,3).','.number_format(($ticket_total-$tickets_sold)/1000,3).'&chdl=Sold|Left&chp=0.628&chl=' . $tickets_sold . '|' . ($ticket_total - $tickets_sold) . '&chtt=Attendance">';
+	echo '</div>';
+echo '</div>';
+echo '<div class="clear"> </div>';
+		
+} 
+
+// Create the function use in the action hook
+
+function bpt_add_dashboard_widgets() {
+	wp_add_dashboard_widget('ticket_sales', 'Ticket Sales', 'bpt_ticket_sales_dashboard_widget');	
+} 
+
+// Hook into the 'wp_dashboard_setup' action to register our other functions
+
+add_action('wp_dashboard_setup', 'bpt_add_dashboard_widgets' );
+
+
+
 /**
 *
 Remove the menu for event press registrations, we want to use our registration page!

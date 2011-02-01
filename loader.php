@@ -3,7 +3,7 @@
 Plugin Name: TikiPress
 Version: 1.1
 Requires at least: WP 3.0, BuddyPress 1.2.5
-Tested up to: WP 3.0, BuddyPress 1.2.6
+Tested up to: WP 3.03, BuddyPress 1.2.6
 Author: Getshopped.org, Paul Gibbs
 Author URI:http://getshopped.org http://byotos.com
 Description: A plugin that combines wp-e-Commerce and BuddyPress allowing people to create events, gather statisics and sell tickets as products.

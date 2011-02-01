@@ -254,7 +254,9 @@ global $bpt_errors, $wpsc_cart;
 			<td><label><?php printf( __( "Ticket %d: *", 'bpt' ), $i+2 ) ?></label></td>
 			<td>
 				<input type="email" name="bpt[]" class="text" value="<?php if ( $has_error ) { echo esc_attr( $bpt_errors[$i] ); } ?>">
+				<?php if ( $has_error ){ ?>
 				<p class="validation-error"><?php _e( "Please enter a valid email.", 'bpt' ) ?></p>
+				<?php }?>
 			</td>
 		</tr>	
 	
@@ -624,8 +626,9 @@ function bpt_attendees($atts) {
 	$id=$atts["id"];
 	if($id==0)
 		return "No Attendees so far. (Event id can not be 0)";
-	$users = bpt_get_registered_users($id);
-
+	$users = bpt_get_registered_users($id);?>
+	<p>These folks have signed up already. <a href="http://en.gravatar.com/">Get a Gravatar</a> to have your picture show up by your name.</p>
+<?php
 	if(!$users)
 		return "No Attendees so far.";
 	$output = "";
@@ -652,12 +655,12 @@ foreach ($users as $user){
 	$output.="<div class='attendee'><h4><a href='".$url."' rel='nofollow'> <img alt='' src='http://www.gravatar.com/avatar/".$usermd5."?s=42' class='avatar avatar-42 photo' height='42' width='42' />".$user->display_name."</a></h4>";
 	
 	if($url)
-		$output.="<p><a href='".$url."' rel='nofollow' style='text-decoration: none; color: #aaa;'>".$url."</a></p>";
+		$output.="<a href='".$url."' rel='nofollow' style='text-decoration: none; font-size:12px; color: black;'>".$url."</a>";
 	
 	elseif('User not found' != $profile){
 	foreach((array)$profile['entry'][0]['accounts'] as $account){
 		if($account["domain"]=="twitter.com")
-		$output .= "<p><a href='".$account["url"]."' rel='nofollow' style='text-decoration: none; color: #aaa;'>".$account["display"]."</a></p><br />";
+		$output .= "<a href='".$account["url"]."' rel='nofollow' style='text-decoration: none; font-size:12px; color: black;'>".$account["display"]."</a>";
 	}
 	}
 	
@@ -771,8 +774,37 @@ function bpt_update_profile(){
 function bpt_redeem_code_page($ticket){
 global $current_user, $wpdb;
 get_currentuserinfo();
-if(!$current_user->ID){
-	echo __('Please login first!', 'bpt');
+if(!$current_user->ID){ ?>
+	<div id="bpt_redeem_join">
+		<p id="login-text">
+		<?php _e( 'Not yet a member?') ?>	<br />
+		<?php _e( 'In order for us to process your ticket you must sign in or')
+		
+		if ( bp_get_signup_allowed() ) : ?>
+			<?php printf( __( '<a href="%s" title="Create an account">create an account</a>.', 'buddypress' ), site_url( BP_REGISTER_SLUG . '/' ) ) ?>
+		<?php endif; ?>
+		
+		<p class="small">  <?php _e( 'If you\'re creating an account please sign up with the same email address your ticket was sent to') ?></p>
+		
+	</div>
+	<div id="bpt_redeem_login"
+		<form name="login-form" id="sidebar-login-form" class="standard-form" action="<?php echo site_url( 'wp-login.php', 'login' ) ?>" method="post">
+			<label><?php _e( 'Username', 'buddypress' ) ?><br />
+			<input type="text" name="log" id="sidebar-user-login" class="input" value="<?php echo attribute_escape(stripslashes($user_login)); ?>" /></label>
+			
+			<label><?php _e( 'Password', 'buddypress' ) ?><br />
+			<input type="password" name="pwd" id="sidebar-user-pass" class="input" value="" /></label>
+			
+			<p class="forgetmenot"><label><input name="rememberme" type="checkbox" id="sidebar-rememberme" value="forever" /> <?php _e( 'Remember Me', 'buddypress' ) ?></label></p>
+			
+			<?php do_action( 'bp_sidebar_login_form' ) ?>
+			<input type="submit" name="wp-submit" id="sidebar-wp-submit" value="<?php _e('Log In'); ?>" tabindex="100" />
+			<input type="hidden" name="testcookie" value="1" />
+		
+		</form>
+	</div>
+<?php
+
 	return;
 }
 	if(isset($_REQUEST['_wpnonce'])){
