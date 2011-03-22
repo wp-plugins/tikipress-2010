@@ -22,25 +22,81 @@ div.bpt-spacer { border-top: 1px solid #f0f0f0; padding-bottom: 12px; }
 div.metabox-prefs dt { font-style: italic; }
 div.metabox-holder { padding-top: 0 !important; }
 
+.grav_radio{
+padding-left:20px;
+margin-bottom: 10px;
+}
+
+
+.bpt_template_select{
+font-size: 12px;
+margin-bottom: 10px;
+
+}
+.bpt_template_select select {
+width:150px !important;
+margin-left:20px;
+margin-bottom: 10px;
+}
+
+.bpt_template_select input {
+width:150px !important;
+margin-left:20px;
+margin-bottom: 10px;
+}
+
 td.badges_pdf{
 	padding: 6px;
+	
 }
 
 .float_left{
 	float:left;
 	width:380px;
-	padding:20px;
+	padding:16px;
 }
 
 #badges_options {
 padding-right:20px;
-width:560px;
+/* width:600px; */
 }
 
 .float_left_img{
-padding-top: 110px;
+    float: left;
+    margin-right: 40px;
+    padding-top: 185px;
+    width: 230px;
+
+
+}
+
+.float_left_img img{
+margin-top: 20px;
+
+}
+
+.template_area{
+border:#d0d0d0;
+border-style:solid;
+border-width:1px; 
+height: 403px;
+width: 311px;
+}
+
+/*
+#background_badge{
+background: url(http://tikipress-two.zaowebdesign.com/wp-content/plugins/tikipress-2010/includes/templates/bpt/badges/wordcamp-ticket-badge.jpg);
+background-repeat: no-repeat;
+width: 340px;
+}
+*/
+
+.float_left_img2{
 float:left;
-width:380px;
+margin-top: 185px;
+margin-left: 50px;
+margin-right: 30px;
+width:320px;
 
 }
 
@@ -73,12 +129,11 @@ Dashboard Widget CSS
 */
 #bpt_dashboard_info{
 float:left;
-Width:50%;
+Width:30%;
 }
 
 #bpt_dashboard_graph{
-float:left;
-width:50%;
+float:right;
 }
 
 .btp_dashboard_stat{
@@ -86,4 +141,201 @@ margin-bottom: 5px;
 margin-top: 8px;
 display: block;
 }
+
+
+/*
+Wordcamp templat posistion CSS
+*/
+
+div.area1{
+
+ font-family: Helvetica;
+ font-size: 40px;
+
+ color:#515151;
+
+
+}
+
+div.area1_container{
+
+ margin-left: 21px;
+ margin-top: 32px;
+ height:40px;
+ width: 230px;
+
+}
+
+div.area2{
+ color: #339999;
+ font-family: Helvetica;
+ font-size: 28px;
+
+}
+
+div.area2_container{
+ margin-left: 21px;
+ height:20px;
+}
+
+div.area3{
+
+ font-family: Helvetica;
+ font-size: 16px;
+ color:#515151;
+
+}
+
+div.area3_container{
+ margin-left: 21px;
+/*  //margin-top: 20px; */
+height:20px;
+
+}
+
+div.area4{
+
+ font-family: Helvetica;
+ font-size: 16px;
+ margin-left: 21px;
+ margin-top: 7px;
+ color:#515151;
+
+}
+
+div.area_container{
+height:20px;
+}
+
+div.area5{
+
+ font-family: Helvetica;
+ font-size: 16px;
+ margin-left: 21px;
+ margin-top: 8px;
+ color:#515151;
+
+}
+
+/*
+div.area5_container{
+height:20px;
+}
+*/
+
+div.area6{
+
+    color: #515151;
+    float: right;
+    font-family: Helvetica;
+    font-size: 18px;
+    margin-right: 21px;
+    margin-top: 15px;
+    text-align: right;
+    width: 150px;
+
+}
+
+/*
+div.area6_container{
+height:20px;
+}
+*/
+
+div.area7{
+ background-color: #339999;
+    color: #FFFFFF;
+    font-family: Helvetica;
+    font-size: 20px;
+    height: 35px;
+    margin-top: 165px;
+    padding-top: 20px;
+    text-align: center;
+}
+
+div#show_avatar{
+	float: right;
+    margin-right: 10px;
+    margin-top: 30px;
+    width: 60px;
+}
+
+/*
+div.area7_container{
+height:20px;
+}
+*/
+
+/*
+div.area1{
+position: absolute; top: 174px; right: 305px;
+ font-family: Helvetica;
+ font-size: 40px;
+ color:#515151;
+
+}
+
+div.area2{
+position: absolute; top: 175px; right: 220px;
+ color: #339999;
+ font-family: Helvetica;
+ font-size: 28px;
+}
+
+div.area3{
+
+ font-family: Helvetica;
+ font-size: 16px;
+ margin-left: 21px;
+ margin-top: 20px;
+ color:#515151;
+
+}
+
+div.area4{
+
+ font-family: Helvetica;
+ font-size: 16px;
+ margin-left: 21px;
+ margin-top: 7px;
+ color:#515151;
+
+}
+
+div.area5{
+
+ font-family: Helvetica;
+ font-size: 16px;
+ margin-left: 21px;
+ margin-top: 8px;
+ color:#515151;
+
+}
+
+div.area6{
+
+    color: #515151;
+    float: right;
+    font-family: Helvetica;
+    font-size: 18px;
+    margin-right: 21px;
+    margin-top: 15px;
+    text-align: right;
+    width: 150px;
+
+}
+
+div.area7{
+ background-color: #339999;
+    color: #FFFFFF;
+    font-family: Helvetica;
+    font-size: 20px;
+    height: 35px;
+    margin-top: 165px;
+    padding-top: 20px;
+    text-align: center;
+}
+
+*/
+
 

@@ -1,7 +1,8 @@
 <?php
 define ( 'BPT_IS_INSTALLED', 1 );
 define ( 'BPT_VERSION', '0.1' );
-
+//this is in here because the theme message produced by buddypress is stupid!
+define( 'BP_SILENCE_THEME_NOTICE', true );
 load_plugin_textdomain( 'bpt', false, '/bp-ticketing/includes/languages/' );
 
 
@@ -77,7 +78,7 @@ function bpt_add_admin_menu($page_hooks, $base_page) {
 	global $bp, $menu;
 
 	if ( !$bp->loggedin_user->is_site_admin || !bpt_is_wpsc_active() )
-		return false;
+		return $page_hooks;
 
 	require_once( dirname( __FILE__ ) . '/bpt-admin.php' );
 
@@ -270,13 +271,15 @@ global $bpt_errors, $wpsc_cart;
 			<p><?php _e( "Please check that your ticket information is all up to date, if your information is blank then please fill it out and update it.", 'bpt' ) ?></p>
 		
 			<?php bpt_displayTikiFields(); ?>
+			
 		</td>
 	</tr>
-<?php }
+<?php 
+}
 add_action( 'wpsc_inside_shopping_cart', 'bpt_extend_checkout_form' );
 
 function bpt_displayTikiFields(){
-	global $current_user, $wpdb;
+	global $current_user, $wpdb, $bp;
 	get_currentuserinfo();
 	$userId= $current_user->ID;
 	if(!$userId){
@@ -304,7 +307,7 @@ function bpt_displayTikiFields(){
 
 						$fields=explode(',', $_POST['field_ids']);
 						foreach ( $fields as $field ){
-							$existing = $wpdb->get_var( 'SELECT id FROM `' . $wpdb->prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID );
+							$existing = $wpdb->get_var( 'SELECT id FROM `' . $bp->table_prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID );
 							if ( isset( $_POST['field_'.$field] ) ){
 								$value = maybe_serialize($_POST['field_'.$field]);
 							}else{
@@ -338,28 +341,28 @@ function bpt_displayTikiFields(){
 								$value = mktime(0, 0, 0, $monthName[$_POST['field_' . $field . '_month']], $_POST['field_' . $field . '_day'], $_POST['field_' . $field . '_year']);
 							}
 							if ( $existing ) {
-								$wpdb->query( 'UPDATE `' . $wpdb->prefix . 'bp_xprofile_data` SET `value` = \'' . $value . '\' WHERE id = ' . $existing . ' LIMIT 1' );
+								$wpdb->query( 'UPDATE `' . $bp->table_prefix . 'bp_xprofile_data` SET `value` = \'' . $value . '\' WHERE id = ' . $existing . ' LIMIT 1' );
 							} else {
-								$wpdb->query( 'INSERT INTO `' . $wpdb->prefix . 'bp_xprofile_data` VALUES ("", "' . $field . '", "' . $current_user->ID . '", "' . $value . '", "")' );
+								$wpdb->query( 'INSERT INTO `' . $bp->table_prefix . 'bp_xprofile_data` VALUES ("", "' . $field . '", "' . $current_user->ID . '", "' . $value . '", "")' );
 							}
 						}
-												return;
+					return;
 					}
 				}
 
 	
 	$options = get_blog_option( BP_ROOT_BLOG, 'bpt', true );
 				$profile_group_id = $options['fields_group_id'];
+				
 					?>
 					<?php if ( bp_has_profile( 'profile_group_id='.$profile_group_id ) ) : while ( bp_profile_groups() ) : bp_the_profile_group(); 
 					$fields = explode(',', bp_get_the_profile_group_field_ids());
+				
 					foreach($fields as $field)
-						$_POST['field_'.$field]=$wpdb->get_var('SELECT `value` FROM `' . $wpdb->prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID);
+						$_POST['field_'.$field]=$wpdb->get_var('SELECT `value` FROM `' . $bp->table_prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID);
 				
 					?>
 	
-						<input type="hidden" name="bpt-redeem-code" value="<?php echo $code; ?>" />
-						<input type="hidden" name="bpt_profile_info" value="true" />
 									
 							<div class="clear"></div>
 					
@@ -382,21 +385,9 @@ function bpt_displayTikiFields(){
 									<?php endif; ?>
 					
 									<?php if ( 'selectbox' == bp_get_the_profile_field_type() ) : ?>
-					
+																	
 										<label for="<?php bp_the_profile_field_input_name() ?>"><?php bp_the_profile_field_name() ?> <?php if ( bp_get_the_profile_field_is_required() ) : ?><?php _e( '(required)', 'buddypress' ) ?><?php endif; ?></label><br />
-										<select name="<?php bp_the_profile_field_input_name() ?>" id="<?php bp_the_profile_field_input_name() ?>">
-											<option value="">--------</option>
-											<?php 
-												$id = bp_get_the_profile_field_id();
-												$options = $wpdb->get_col( 'SELECT `fields`.`name` FROM `' . $wpdb->prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id` = ' . $id );
-												foreach ( $options as $option ) {
-													$selected = '';
-													if ( $_POST['field_'.$id] == $option )
-														$selected = 'selected="selected"';
-													echo '<option value="' . $option . '" ' . $selected . '>' . $option . '</option>';
-												}
-											?>
-										</select>
+										<select name="<?php bp_the_profile_field_input_name() ?>" id="<?php bp_the_profile_field_input_name() ?>"><?php bp_the_profile_field_options() ?></select>
 					
 									<?php endif; ?>
 					
@@ -406,9 +397,9 @@ function bpt_displayTikiFields(){
 										<select name="<?php bp_the_profile_field_input_name() ?>" id="<?php bp_the_profile_field_input_name() ?>" multiple="multiple">
 											<?php 
 												$id = bp_get_the_profile_field_id();
-												$values = $wpdb->get_col( 'SELECT `value` FROM `' . $wpdb->prefix . 'bp_xprofile_data` WHERE field_id = ' . $id . ' AND user_id = '.$current_user->ID );
+												$values = $wpdb->get_col( 'SELECT `value` FROM `' . $bp->table_prefix . 'bp_xprofile_data` WHERE field_id = ' . $id . ' AND user_id = '.$current_user->ID );
 												$values = unserialize($values[0]);
-												$options = $wpdb->get_col( 'SELECT `fields`.`name` FROM `' . $wpdb->prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id` = ' . $id );
+												$options = $wpdb->get_col( 'SELECT `fields`.`name` FROM `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id` = ' . $id );
 												foreach ( $options as $option ) {
 													$selected = '';
 													if ( in_array( $option, (array)$values ) )
@@ -442,7 +433,6 @@ function bpt_displayTikiFields(){
 					
 										<div class="checkbox">
 											<span class="label"><?php bp_the_profile_field_name() ?> <?php if ( bp_get_the_profile_field_is_required() ) : ?><?php _e( '(required)', 'buddypress' ) ?><?php endif; ?></span>
-					
 											<?php bp_the_profile_field_options() ?>
 										</div>
 					
@@ -474,18 +464,18 @@ function bpt_displayTikiFields(){
 							<?php endwhile; ?>
 					
 						<?php do_action( 'bp_after_profile_field_content' ) ?>
-										
+						
+						<input type="hidden" name="bpt-redeem-code" value="<?php echo $code; ?>" />
+						<input type="hidden" name="bpt_profile_info" value="true" />		
 						<input type="hidden" name="field_ids" id="field_ids" value="<?php bp_the_profile_group_field_ids() ?>" />
 						<?php wp_nonce_field( 'bpt_redemption' ) ?>
 					
 					
-					<?php endwhile; endif; ?> <?php
-					return;
+					<?php endwhile; endif;
+				return;
 
-
-		
 	//bpt_edit_profile();
-	//'<pre>'.print_r($wpsc_cart,true). '</pre>';
+
 }
 
 function bpt_extend_checkout_validation( $validation_data ) {
@@ -512,7 +502,7 @@ function bpt_extend_checkout_validation( $validation_data ) {
 
 	if ( !isset( $_POST['bpt'] ) )
 		return $validation_data;
-//exit('<pre>'.print_r($_POST['bpt'],true). '</pre>');
+
 
 	$bpt_errors = array();
 	$_POST['bpt'] = (array)$_POST['bpt'];
@@ -532,13 +522,18 @@ function bpt_extend_checkout_validation( $validation_data ) {
 add_filter( 'wpsc_checkout_validate_forms', 'bpt_extend_checkout_validation' );
 
 function bpt_update_tiki_fields(){
-global $bpt_errors, $current_user, $wpdb;
-
+global $bpt_errors, $current_user, $wpdb, $bp;
+//echo'<pre>'.print_r($_POST,1).'</pre>';
 $fields=explode(',', $_POST['field_ids']);
+//echo'<pre> fff are'.print_r($fields,1).'</pre>';
 						foreach ( $fields as $field ){
-							$existing = $wpdb->get_var( 'SELECT id FROM `' . $wpdb->prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID );
+							$existing = $wpdb->get_var( 'SELECT id FROM `' . $bp->table_prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID );
+							
+							//echo'<pre> current user'.print_r($current_user->ID,1).'</pre>';
 							if ( isset( $_POST['field_'.$field] ) ){
+							
 								$value = maybe_serialize($_POST['field_'.$field]);
+								//echo('value'.print_r($value,1).'</pre>');
 							}else{
 								$monthName = array(
 								
@@ -570,11 +565,15 @@ $fields=explode(',', $_POST['field_ids']);
 								$value = mktime(0, 0, 0, $monthName[$_POST['field_' . $field . '_month']], $_POST['field_' . $field . '_day'], $_POST['field_' . $field . '_year']);
 							}
 							if ( $existing ) {
-								$wpdb->query( 'UPDATE `' . $wpdb->prefix . 'bp_xprofile_data` SET `value` = \'' . $value . '\' WHERE id = ' . $existing . ' LIMIT 1' );
+								$wpdb->query( 'UPDATE `' . $bp->table_prefix . 'bp_xprofile_data` SET `value` = \'' . $value . '\' WHERE id = ' . $existing . ' LIMIT 1' );
+								//echo('INSERT INTO `' . $bp->table_prefix . 'bp_xprofile_data` VALUES ("", "' . $field . '", "' . $current_user->ID . '", "' . $value . '", "")');
 							} else {
-								$wpdb->query( 'INSERT INTO `' . $wpdb->prefix . 'bp_xprofile_data` VALUES ("", "' . $field . '", "' . $current_user->ID . '", "' . $value . '", "")' );
+								$wpdb->query( 'INSERT INTO `' . $bp->table_prefix . 'bp_xprofile_data` VALUES ("", "' . $field . '", "' . $current_user->ID . '", "' . $value . '", "")' );
+								
+								//exit('<pre>'.print_r($bp,1).'</pre>');
 							}
 						}
+						//exit('hurro');
 						return;
 
 
@@ -618,7 +617,7 @@ function bpt_create_code( $email, $purchase_id ) {
 
 //shortcode function,outputs list of attendees in the same markup as wordcamp sanfran 2010 page
 function bpt_attendees($atts) {
-	global $wpdb;
+	global $wpdb, $bp;
 	
 	extract(shortcode_atts(array(
 		'id' => 0
@@ -636,7 +635,7 @@ function bpt_attendees($atts) {
 <br clear='all' /> ";
 foreach ($users as $user){
 	$usermd5=md5( strtolower( trim( $user->user_email ) ) );
-	$url = $wpdb->get_var('SELECT `'.$wpdb->prefix.'bp_xprofile_data`.`value` FROM `'.$wpdb->prefix.'bp_xprofile_data` WHERE `'.$wpdb->prefix.'bp_xprofile_data`.`field_id`=856 AND  `'.$wpdb->prefix.'bp_xprofile_data`.`user_id`='.$user->ID);
+	$url = $wpdb->get_var('SELECT `'.$bp->table_prefix.'bp_xprofile_data`.`value` FROM `'.$bp->table_prefix.'bp_xprofile_data` WHERE `'.$bp->table_prefix.'bp_xprofile_data`.`field_id`=856 AND  `'.$bp->table_prefix.'bp_xprofile_data`.`user_id`='.$user->ID);
 	
 	$old_track = ini_set('track_errors', '1');
 	if(!$str = @file_get_contents( 'http://www.gravatar.com/'.$usermd5.'.php' )){
@@ -679,24 +678,23 @@ function bpt_subnav(){
 
 add_action( 'ep_subnav', 'bpt_subnav' );
 
+
 function bpt_buy_now($output, $user_status){
 	global $bp, $ep_models, $wpdb, $wpsc_query;
 	$post_id=get_the_ID();
 	
 	
-	$query = $wpdb->get_results("SELECT post_id FROM wp_postmeta WHERE meta_key='_bpt_event_prod_id' and meta_value = $post_id;",ARRAY_N);
-	$product_id = $query[0][0];
-	
+	$product_id = $wpdb->get_var("SELECT post_id FROM ".$wpdb->postmeta." WHERE meta_key='_bpt_event_prod_id' and meta_value = $post_id;");
+		
 	if((float)WPSC_VERSION >= 3.8 ){
-			$product_url = get_permalink($product_id);
-		 }else{
-			$wpsc_query = new WPSC_query(array('product_id'=>$product_id));
-			while (wpsc_have_products()) :  wpsc_the_product();
-			$product_url=wpsc_the_product_permalink();
-			endwhile;
-		}
+		$product_url = get_permalink($product_id);
+	 }else{
+		$wpsc_query = new WPSC_query(array('product_id'=>$product_id));
+		while (wpsc_have_products()) :  wpsc_the_product();
+		$product_url=wpsc_the_product_permalink();
+		endwhile;
+	}
 
-	
 	if ( ep_registration_open() ) {
 		$userid = bp_loggedin_user_id();
 		if ( $userid != 0 ) {
@@ -713,14 +711,16 @@ function bpt_buy_now($output, $user_status){
 	}
 }
 
+
 add_filter('ep_register_button', 'bpt_buy_now', 10, 3);
+
 
 
 add_action('edit_user_profile', 'bpt_edit_profile');
 add_action('edit_user_profile_update', 'bpt_update_profile');
 
 function bpt_edit_profile(){
-	global $wpdb;
+	global $wpdb, $bp;
 		?>
 		<a name="xprofile_details"></a><h3>Buddypress ticketing fields:</h3>
 		<table class="form-table">
@@ -729,7 +729,7 @@ function bpt_edit_profile(){
 		
 	$profile_data = bpt_get_profile_data($user_id);
 	
-	$profile_fields=$wpdb->get_results('SELECT `'.$wpdb->prefix.'bp_xprofile_fields`.`name`, `'.$wpdb->prefix.'bp_xprofile_fields`.`id` FROM `'.$wpdb->prefix.'bp_xprofile_fields` WHERE (`'.$wpdb->prefix.'bp_xprofile_fields`.`type` = "textarea" OR `'.$wpdb->prefix.'bp_xprofile_fields`.`type` = "textbox") AND `'.$wpdb->prefix.'bp_xprofile_fields`.`id` != 1 ');
+	$profile_fields=$wpdb->get_results('SELECT `'.$bp->table_prefix.'bp_xprofile_fields`.`name`, `'.$bp->table_prefix.'bp_xprofile_fields`.`id` FROM `'.$bp->table_prefix.'bp_xprofile_fields` WHERE (`'.$bp->table_prefix.'bp_xprofile_fields`.`type` = "textarea" OR `'.$bp->table_prefix.'bp_xprofile_fields`.`type` = "textbox") AND `'.$bp->table_prefix.'bp_xprofile_fields`.`id` != 1 ');
 	
 	foreach((array)$profile_fields as $field){
 		?>
@@ -744,8 +744,8 @@ function bpt_edit_profile(){
 }
 
 function bpt_get_profile_data($id){
-	global $wpdb;
-	$profile_fields=$wpdb->get_results('SELECT `'.$wpdb->prefix.'bp_xprofile_fields`.`name`, `'.$wpdb->prefix.'bp_xprofile_data`.`value` FROM `'.$wpdb->prefix.'bp_xprofile_data` JOIN `'.$wpdb->prefix.'bp_xprofile_fields` ON `'.$wpdb->prefix.'bp_xprofile_data`.`field_id` = `'.$wpdb->prefix.'bp_xprofile_fields`.`id` WHERE `'.$wpdb->prefix.'bp_xprofile_data`.`user_id`='.absint($id).' AND ( `'.$wpdb->prefix.'bp_xprofile_fields`.`type` = "textarea" OR `'.$wpdb->prefix.'bp_xprofile_fields`.`type` = "textbox" )');
+	global $wpdb, $bp;
+	$profile_fields=$wpdb->get_results('SELECT `'.$bp->table_prefix.'bp_xprofile_fields`.`name`, `'.$bp->table_prefix.'bp_xprofile_data`.`value` FROM `'.$bp->table_prefix.'bp_xprofile_data` JOIN `'.$bp->table_prefix.'bp_xprofile_fields` ON `'.$bp->table_prefix.'bp_xprofile_data`.`field_id` = `'.$bp->table_prefix.'bp_xprofile_fields`.`id` WHERE `'.$bp->table_prefix.'bp_xprofile_data`.`user_id`='.absint($id).' AND ( `'.$bp->table_prefix.'bp_xprofile_fields`.`type` = "textarea" OR `'.$bp->table_prefix.'bp_xprofile_fields`.`type` = "textbox" )');
 	$profile_data=array();
 	
 	foreach((array)$profile_fields as $field){
@@ -755,56 +755,104 @@ function bpt_get_profile_data($id){
 }
 
 function bpt_update_profile(){
-	global $wpdb;
+	global $wpdb, $bp;
 	$user_id = absint($_POST['user_id']);
 	
 	$profile_data = bpt_get_profile_data($user_id);
 	
-	$profile_fields=$wpdb->get_results('SELECT `'.$wpdb->prefix.'bp_xprofile_fields`.`name`, `'.$wpdb->prefix.'bp_xprofile_fields`.`id` FROM `'.$wpdb->prefix.'bp_xprofile_fields` WHERE (`'.$wpdb->prefix.'bp_xprofile_fields`.`type` = "textarea" OR `'.$wpdb->prefix.'bp_xprofile_fields`.`type` = "textbox") AND `'.$wpdb->prefix.'bp_xprofile_fields`.`id` != 1 ');
+	$profile_fields=$wpdb->get_results('SELECT `'.$bp->table_prefix.'bp_xprofile_fields`.`name`, `'.$bp->table_prefix.'bp_xprofile_fields`.`id` FROM `'.$bp->table_prefix.'bp_xprofile_fields` WHERE (`'.$bp->table_prefix.'bp_xprofile_fields`.`type` = "textarea" OR `'.$bp->table_prefix.'bp_xprofile_fields`.`type` = "textbox") AND `'.$bp->table_prefix.'bp_xprofile_fields`.`id` != 1 ');
 		
 	foreach((array)$profile_fields as $field){
 		if(isset($profile_data[$field->name])){
-			$wpdb->query($wpdb->prepare('UPDATE `'.$wpdb->prefix.'bp_xprofile_data` SET `value`="%s" WHERE `field_id`=%d AND `user_id`=%d LIMIT 1', $_POST['bpt_'.$field->id], $field->id, $user_id));
+			$wpdb->query($wpdb->prepare('UPDATE `'.$bp->table_prefix.'bp_xprofile_data` SET `value`="%s" WHERE `field_id`=%d AND `user_id`=%d LIMIT 1', $_POST['bpt_'.$field->id], $field->id, $user_id));
 		}else{
-			$wpdb->query($wpdb->prepare('INSERT INTO `'.$wpdb->prefix.'bp_xprofile_data` VALUES("", %d, %d, "%s", "%s")  LIMIT 1', $field->id, $user_id, $_POST['bpt_'.$field->id], time() ));
+			$wpdb->query($wpdb->prepare('INSERT INTO `'.$bp->table_prefix.'bp_xprofile_data` VALUES("", %d, %d, "%s", "%s")  LIMIT 1', $field->id, $user_id, $_POST['bpt_'.$field->id], time() ));
 		}
 	}
 }
 
 function bpt_redeem_code_page($ticket){
-global $current_user, $wpdb;
+
+global $current_user, $wpdb, $bp;
 get_currentuserinfo();
-if(!$current_user->ID){ ?>
-	<div id="bpt_redeem_join">
-		<p id="login-text">
-		<?php _e( 'Not yet a member?') ?>	<br />
-		<?php _e( 'In order for us to process your ticket you must sign in or')
-		
-		if ( bp_get_signup_allowed() ) : ?>
-			<?php printf( __( '<a href="%s" title="Create an account">create an account</a>.', 'buddypress' ), site_url( BP_REGISTER_SLUG . '/' ) ) ?>
-		<?php endif; ?>
-		
-		<p class="small">  <?php _e( 'If you\'re creating an account please sign up with the same email address your ticket was sent to') ?></p>
-		
-	</div>
-	<div id="bpt_redeem_login"
-		<form name="login-form" id="sidebar-login-form" class="standard-form" action="<?php echo site_url( 'wp-login.php', 'login' ) ?>" method="post">
-			<label><?php _e( 'Username', 'buddypress' ) ?><br />
-			<input type="text" name="log" id="sidebar-user-login" class="input" value="<?php echo attribute_escape(stripslashes($user_login)); ?>" /></label>
+if(!$current_user->ID){
+?>
+	 <p id="login-text">
+	<?php
+	                        ///not sure if this is the best way to do this..research it perhapes
+    		 if(isset($_POST['wpsc_submit_registration'])){
+    		 $errors = array();
+	    		 if(empty ($_POST['password']) || empty($_POST['password2']))
+	    		 	$errors[]= 'You need to enter in a password';
+	    		 
+	    		 if($_POST['password']!= $_POST['password2'] )
+					$errors[]= 'Your passwords need to match';
+				
+					
+				if (empty ($_POST['username']))
+					$errors[]= 'You must enter a username';
+				else {
+					$name_test = validate_username($_POST['username']);
+						if($user_test != true) 
+								$errors[] = 'Invalid Username';
+							
+					// check whether username already exists
+					$user_id = username_exists( $_POST['username'] );
+						if($user_id) 
+							$errors[]= 'This username already exists';
+				}
+				if(empty($_POST['email']))
+					$errors[] = "You must enter an email."; 	
+				else {
+					$email_test = email_exists($_POST['email']);
+					
+					if($email_test != false) 
+							$errors[] = 'An account with this email has already been registered';
+				}					
+			}
+
+
+    		
+			if (!empty($errors)){
+				foreach ($errors as $error)
+				echo '<div class="login_error">' . $error . '</div>';
+				}
+			else {
+			 ?>
+		<h2><?php _e('Opps, in order to redeem your ticket you need to login!');?></h2>
+		<p><?php _e('Fill out the information below to create your WordCamp account, you will then be logged in automatically. If you already have an account then please sign in.');?> </p> <div id="bpt_redeem_join"> <?php			
+			}
 			
-			<label><?php _e( 'Password', 'buddypress' ) ?><br />
-			<input type="password" name="pwd" id="sidebar-user-pass" class="input" value="" /></label>
-			
-			<p class="forgetmenot"><label><input name="rememberme" type="checkbox" id="sidebar-rememberme" value="forever" /> <?php _e( 'Remember Me', 'buddypress' ) ?></label></p>
-			
-			<?php do_action( 'bp_sidebar_login_form' ) ?>
-			<input type="submit" name="wp-submit" id="sidebar-wp-submit" value="<?php _e('Log In'); ?>" tabindex="100" />
-			<input type="hidden" name="testcookie" value="1" />
-		
-		</form>
+		$form = '';
+		$form .=  '<div id="tiki_sign_up">';
+		$form .=  '<h2> Sign Up </h2>';
+		$form .=  '<form method="post" action="" id="simplr-reg">';
+		$form .=  '<label for="username" class="left">Username:</label>';
+		$form .=  '<input type="text" name="username" class="right" value="'.$_POST['username'] .'" /><br/>';
+		$form .=  '<label for="email" class="left">Email: </label>';
+		$form .=  '<input type="text" name="email" class="right" value="'.$_POST['email'] .'" /><br/>';
+		$form .=  '<label for="password" class="left">Password:</label>';
+		$form .=  '<input type="password" name="password" class="right" value=""/><br/>';
+		$form .=  '<label for="password" class="left">Confirm Password:</label>';
+		$form .=  '<input type="password" name="password2" class="right" value=""/><br/>';
+		$form .=  '<input type="submit" name="wpsc_submit_registration" value="Register" class="submit">';
+		$form .=  '</form>';
+		$form .=  '</div>';
+		echo $form;
+
+
+					?>
+					</div>
+<div id="bpt_redeem_login">
+
+		<h2>Sign In</h2>
+</p>	
+		<?php
+		$args = array( 'remember' => false );
+		wp_login_form( $args );
+		?>
 	</div>
 <?php
-
 	return;
 }
 	if(isset($_REQUEST['_wpnonce'])){
@@ -843,7 +891,7 @@ if(!$current_user->ID){ ?>
 						// Send email. This is an example, you'd probably want to remove this and hook into the filter.
 						$fields=explode(',', $_POST['field_ids']);
 						foreach ( $fields as $field ){
-							$existing = $wpdb->get_var( 'SELECT id FROM `' . $wpdb->prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID );
+							$existing = $wpdb->get_var( 'SELECT id FROM `' . $bp->table_prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID );
 							if ( isset( $_POST['field_'.$field] ) ){
 								$value = maybe_serialize($_POST['field_'.$field]);
 							}else{
@@ -877,9 +925,9 @@ if(!$current_user->ID){ ?>
 								$value = mktime(0, 0, 0, $monthName[$_POST['field_' . $field . '_month']], $_POST['field_' . $field . '_day'], $_POST['field_' . $field . '_year']);
 							}
 							if ( $existing ) {
-								$wpdb->query( 'UPDATE `' . $wpdb->prefix . 'bp_xprofile_data` SET `value` = \'' . $value . '\' WHERE id = ' . $existing . ' LIMIT 1' );
+								$wpdb->query( 'UPDATE `' . $bp->table_prefix . 'bp_xprofile_data` SET `value` = \'' . $value . '\' WHERE id = ' . $existing . ' LIMIT 1' );
 							} else {
-								$wpdb->query( 'INSERT INTO `' . $wpdb->prefix . 'bp_xprofile_data` VALUES ("", "' . $field . '", "' . $current_user->ID . '", "' . $value . '", "")' );
+								$wpdb->query( 'INSERT INTO `' . $bp->table_prefix . 'bp_xprofile_data` VALUES ("", "' . $field . '", "' . $current_user->ID . '", "' . $value . '", "")' );
 							}
 						}
 						////$product_id / product name	is broke :(		
@@ -913,7 +961,7 @@ if(!$current_user->ID){ ?>
 					<?php if ( bp_has_profile( 'profile_group_id='.$profile_group_id ) ) : while ( bp_profile_groups() ) : bp_the_profile_group(); 
 					$fields = explode(',', bp_get_the_profile_group_field_ids());
 					foreach($fields as $field)
-						$_POST['field_'.$field]=$wpdb->get_var('SELECT `value` FROM `' . $wpdb->prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID);
+						$_POST['field_'.$field]=$wpdb->get_var('SELECT `value` FROM `' . $bp->table_prefix . 'bp_xprofile_data` WHERE field_id = ' . $field . ' AND user_id = '.$current_user->ID);
 					
 					?>
 	
@@ -948,7 +996,7 @@ if(!$current_user->ID){ ?>
 											<option value="">--------</option>
 											<?php 
 												$id = bp_get_the_profile_field_id();
-												$options = $wpdb->get_col( 'SELECT `fields`.`name` FROM `' . $wpdb->prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id` = ' . $id );
+												$options = $wpdb->get_col( 'SELECT `fields`.`name` FROM `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id` = ' . $id );
 												foreach ( $options as $option ) {
 													$selected = '';
 													if ( $_POST['field_'.$id] == $option )
@@ -966,9 +1014,9 @@ if(!$current_user->ID){ ?>
 										<select name="<?php bp_the_profile_field_input_name() ?>" id="<?php bp_the_profile_field_input_name() ?>" multiple="multiple">
 											<?php 
 												$id = bp_get_the_profile_field_id();
-												$values = $wpdb->get_col( 'SELECT `value` FROM `' . $wpdb->prefix . 'bp_xprofile_data` WHERE field_id = ' . $id . ' AND user_id = '.$current_user->ID );
+												$values = $wpdb->get_col( 'SELECT `value` FROM `' . $bp->table_prefix . 'bp_xprofile_data` WHERE field_id = ' . $id . ' AND user_id = '.$current_user->ID );
 												$values = unserialize($values[0]);
-												$options = $wpdb->get_col( 'SELECT `fields`.`name` FROM `' . $wpdb->prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id` = ' . $id );
+												$options = $wpdb->get_col( 'SELECT `fields`.`name` FROM `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id` = ' . $id );
 												foreach ( $options as $option ) {
 													$selected = '';
 													if ( in_array( $option, (array)$values ) )
@@ -1068,7 +1116,7 @@ add_shortcode('bpt_redeem_code_page', 'bpt_redeem_code_page');
 
 
 function bpt_send_redeem_vouchers( $sale_data ) {
-	global $wpdb;
+	global $wpdb, $bp;
 	$sale_id = absint( $sale_data['purchase_id'] );
 	$sale_status = $wpdb->get_var( 'SELECT `logs`.`processed` FROM `' . $wpdb->prefix . 'wpsc_purchase_logs` `logs` WHERE `logs`.`id` = ' . $sale_id );
 	$accepted_statuses = array( 2, 3, 4 );
@@ -1082,7 +1130,7 @@ function bpt_send_redeem_vouchers( $sale_data ) {
 			You Will need to register to claim this ticket. If your already a member and this is the registered email address for the account then please enter the following code into the
 			Redeem Ticket page at: %s.
 			
-			Your redeem code is: %s. If you are not a member you will need to sign up using this email address so your ticket can be validated.", $product_name, home_url(), $code['code'] );
+			Your redeem code is: %s. If you are not a member you will need to sign up using this email address so your ticket can be validated.", $product_name, 'http://wordcamp.org.nz/redeem-your-ticket-code/', $code['code'] );
 			$email = array( 'to' => $code['email'],
 							'subject' => sprintf( __( "%s - redemption code", 'bpt' ), $product_name ),
 							'message' => $message );

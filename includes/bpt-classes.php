@@ -15,16 +15,13 @@ function bpt_is_ticket_code_valid( $code ) {
 
 	if ( !$purchase_id )
 		return apply_filters( 'bpt_is_ticket_code_valid', false );
-
-	//$wpdb->get_results( $wpdb->prepare( "delete from " . WPSC_TABLE_META . " where meta_id = %d limit 1", $purchase_id ) );
 	return apply_filters( 'bpt_is_ticket_code_valid', $purchase_id );
 }
 
 //gets the users tikipress feilds
 function bpt_get_users_profile_data($user_id){
-	global $wpdb;
-	$sql =$wpdb->prepare('SELECT `field_id` , `value` FROM `'.$wpdb->prefix.'bp_xprofile_data` WHERE `user_id` = '.$user_id);
-	//echo exit($sql);
+	global $wpdb, $bp;
+	$sql =$wpdb->prepare('SELECT `field_id` , `value` FROM `'.$bp->table_prefix.'bp_xprofile_data` WHERE `user_id` = '.$user_id);
 	return apply_filters( 'bpt_get_users_profile_data', $wpdb->get_results( $sql, ARRAY_A ) );
 }
 
@@ -63,7 +60,7 @@ function bpt_wpsc_get_categories() {
 	global $wpdb;
 
 	if((float)WPSC_VERSION >= 3.8 ){
-	$sql = "SELECT wp_terms.name, wp_terms.term_id FROM wp_term_taxonomy LEFT JOIN wp_terms ON wp_term_taxonomy.term_id = wp_terms.term_id WHERE wp_term_taxonomy.taxonomy = 'wpsc_product_category'";
+	$sql = "SELECT ".$wpdb->prefix."terms.name, ".$wpdb->prefix."terms.term_id FROM ".$wpdb->prefix."term_taxonomy LEFT JOIN ".$wpdb->prefix."terms ON ".$wpdb->prefix."term_taxonomy.term_id = ".$wpdb->prefix."terms.term_id WHERE ".$wpdb->prefix."term_taxonomy.taxonomy = 'wpsc_product_category'";
 	}else {
 		$sql = "SELECT `id`, `name` FROM `" . WPSC_TABLE_PRODUCT_CATEGORIES . "` WHERE `active`='1'";
 	}
@@ -118,6 +115,7 @@ function bpt_get_registered_users($product_id, $id_only=false){
 		return $wpdb->get_col( $sql );
 	}else{
 		return $wpdb->get_results( $sql );
+	
 	}
 
 }
@@ -138,18 +136,39 @@ class PDF extends FPDF
 {
 	var $bpt_data;
 
-//is required compaires the post array with all the possible options for badges and returns an array 1-7 of the selected option ids this can then be used to load the matching user data
-	function isRequired($arr1, $arr2){
-		$requiredItems = $arr1['bpt']['fields'];
-		//echo '<pre>' . print_r ($requiredItems,1) . '</pre>';
-		for ($i = 1; $i <= count($requiredItems); $i++){
-			if($arr2['field_id']== $requiredItems[$i])
-				return $i;
-		}
-		return -1;
-	}
+function LoadBadgeImage($files){
 
-	
+//exit('<pre> imagesss'.print_r($files,1).'</pre>');
+
+if((!empty($files["logo_upload"])) && ($files['logo_upload']['error'] == 0)) {
+  //Check if the file is JPEG image and it's size is less than 350Kb
+  $filename = basename($_FILES['logo_upload']['name']);
+  $ext = substr($filename, strrpos($filename, '.') + 1);
+  if (($ext == "jpg") && ($_FILES["logo_upload"]["type"] == "image/jpeg") && 
+    ($_FILES["logo_upload"]["size"] < 350000)) {
+    //Determine the path to which we want to save this file
+      $newname = WP_CONTENT_DIR.'/plugins/'.WPSC_TICKETS_FOLDER.'/images/'.$filename;
+      //Check if the file with the same name is already exists on the server
+      if (!file_exists($newname)) {
+        //Attempt to move the uploaded file to it's new place
+        if ((move_uploaded_file($files['logo_upload']['tmp_name'],$newname))) {
+           return $newname;
+        } else {
+           echo "Error: A problem occurred during file upload!";
+        }
+      } else {
+         return $newname;
+      }
+  } else {
+     echo "Error: Only .jpg images under 350Kb are accepted for upload";
+  }
+} else {
+ echo "Error: No file uploaded";
+}
+
+
+
+}
 
 function LoadBadgesData($settings){
 	global $wpdb;
@@ -163,6 +182,8 @@ function LoadBadgesData($settings){
 	$user_ids = bpt_get_registered_users( $product_id, true );
 		
 	$i=0;
+	
+	//dont need this line?
 	$users_data = array();
 		
 	foreach ($user_ids as $user_id){
@@ -172,6 +193,7 @@ function LoadBadgesData($settings){
 		$user_email = $user->user_email;
 		//set up default aray 7 badge template areas array7 is just for the email address.
 		$user_data = array(0=>'',1=>'',2=>'',3=>'',4=>'',5=>'',6=>'',7=>'');
+		$template_data = array(0=>'',1=>'',2=>'',3=>'',4=>'',5=>'',6=>'',7=>'');
 		$field_data = bpt_get_users_profile_data($user_id);
 		
 		
@@ -186,69 +208,88 @@ function LoadBadgesData($settings){
 			$profile = unserialize( $str );
 		
 		ini_set('track_errors', $old_track);
-		
-		$user_url=($url)?$url:$profile['entry'][0]['urls'][0]['value'];
-		
-			foreach((array)$profile['entry'][0]['accounts'] as $account){
-				if($account["domain"]=="twitter.com")
-					$twitter_id = $account["display"];
-			}
-		
+		//check if the users have a gravatar profile before trying to get their info
+		if ($profile != 'User not found'){
+			$user_url=($url)?$url:$profile['entry'][0]['urls'][0]['value'];
+				foreach((array)$profile['entry'][0]['accounts'] as $account){
+					if($account["domain"]=="twitter.com")
+						$twitter_id = $account["display"];
+				}
+		}
+		//$fields = $settings;
+		$fields = $_POST['bpt']['fields'];
+
+		//remove excluded feilds from final array
+		$excluded = array_keys($fields,'exclude');
+
+		foreach($excluded as $exclude){
+			unset($fields[$exclude]);
+		}
+		//put the field vales that are been included into the template array we want to make the feild value as the key and the key as the value
+		foreach ($fields as $key => $val) {
+    		$template[$val-1]=$key;
+    	}
 
 		foreach ($field_data as $data){
-		//is required checks if the field name or id is in the post array for the template
-			$templatePosistion = $this->isRequired($_POST, $data);
-			
-			if ($templatePosistion > -1)
-	        	$user_data[$templatePosistion-1]=$data['value'];
-	      
-	           //j loop is doing the feilds i loop is doing the users
-			//echo '<pre>' . print_r($data,true). '</pre>';
-		}
-			
-			for ($j=1; $j<= count($_POST['bpt']['fields']); $j++){
-			
-				switch (trim($_POST['bpt']['fields'][$j])){
+		//j is looping the feilds the count 7 relates to the template posistions will need to create this dynamically if more templates are introuduced.
+			for ($j=0; $j<=7; $j++){
+				switch ($template[$j]){
 					case 'badges_twitter':
-						$user_data[$j-1] = $twitter_id;
+						if (!$twitter_id)
+							$twitter_id = "";
+						$user_data[$j] = $twitter_id;
 						break;
 					case 'badges_site':
-						$user_data[$j-1] = $user_url;
+						if (!$user_url)
+							$user_url = "";
+						$user_data[$j] = $user_url;
 						break;
 					case 'badges_email':
-						$user_data[$j-1] = $user_email;
+						$user_data[$j] = $user_email;
 						break;
+					default:
+						if($data['field_id'] == $template[$j]){
+							$value =$data['value'];
+							$user_data[$j] = $value;
+						}
+						
+					break;
+						
 				}
 	
-			}
+			}	
+	      
+		}
 		//put user email  into array at posistion 7 if true will get avatar out with this
 		if ($_POST['badges_gravatar']==1)
 			$user_data[7]= $user_email;
-			//$user_data[7]= get_avatar( $user->user_email , '50' );
-			
+
 		$users_data[$i] = $user_data;
 		$i++;	
 	}
+		
 	return $users_data;
 }
-//loads the pdf data for the attendee infomation	
-function LoadData( $settings)
+
+
+function LoadData( $settings )
 	{
-		global $wpdb;
+		global $wpdb, $bp;
 		$event_id = $_POST['events_dropdown'];
 		
-		$headers = $wpdb->get_results( 'SELECT `fields`.`name`, `fields`.`id` FROM `' . $wpdb->prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`id` IN (' . implode( ',', $settings['fields'] ) . ')' );
+		$headers = $wpdb->get_results( 'SELECT `fields`.`name`, `fields`.`id` FROM `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`id` IN (' . implode( ',', $settings['fields'] ) . ')' );
 		
 		 $product_id = bpt_wpsc_get_product_id_from_event($event_id);
 
 		$users = bpt_get_registered_users( $product_id, true );
-
-		$users_last_name=$wpdb->get_col( 'SELECT `users`.`id` FROM `' . $wpdb->prefix . 'users` `users` JOIN `' . $wpdb->prefix . 'usermeta` `meta` ON users.id = `meta`.user_id WHERE meta_key = "last_name" AND `users`.`id` IN (' . implode( ',', $users ) . ') ORDER BY meta_value ASC' );
+		//exit('<pre> hello'.print_r($users,1).'</pre>');
+		//$users_last_name=$wpdb->get_col( 'SELECT `users`.`id` FROM `' . $bp->table_prefix . 'users` `users` JOIN `' . $wpdb->prefix . 'usermeta` `meta` ON users.id = `meta`.user_id WHERE meta_key = "last_name" AND `users`.`id` IN (' . implode( ',', $users ) . ') ORDER BY meta_value ASC' );
 		
-		$users_no_lastname = $wpdb->get_col( 'SELECT `users`.`id` FROM `' . $wpdb->prefix.'users` `users` WHERE `users`.`id` IN (' . implode( ',', $users ) . ') AND `users`.`id` NOT IN (' . implode( ',', $users_last_name ) . ') ORDER BY user_login ASC' );
+		//$users_no_lastname = $wpdb->get_col( 'SELECT `users`.`id` FROM `' . $bp->table_prefix.'users` `users` WHERE `users`.`id` IN (' . implode( ',', $users ) . ') AND `users`.`id` NOT IN (' . implode( ',', $users_last_name ) . ') ORDER BY user_login ASC' );
 		
-		$users = array_merge( $users_last_name, $users_no_lastname );
+		//$users = array_merge( $users_last_name, $users_no_lastname );
 		$this->bpt_data = array( 'headers' => $headers, 'users' => $users );
+		//exit('<pre> hello'.print_r($this->bpt_data,1).'</pre>');
 	}
 
 	function Header(){
@@ -282,7 +323,7 @@ function LoadData( $settings)
 				$y=$this->GetY();
 				
 	        $this->MultiCell($width,7,$header[$i]->name,1,0,'C',true);
-	    $this->Ln();
+	   // $this->Ln();
 	   	 }
 	    }
 	}
@@ -308,55 +349,48 @@ function LoadData( $settings)
 		    $this->SetDrawColor(0);
 		    $this->SetLineWidth(0);
 		    $this->MultiCell($w,10,'Page '.$this->PageNo().'/{nb}',0,0,'C');
-		    $this->Ln();
+		   // $this->Ln();
 		}
 
 	}
-		
-	//Colored table
-	function PrintTable()
-	{
-		global $wpdb;
 	
+
+		//Colored table
+	function PrintTable()
+		{
+		global $wpdb, $bp;
+		 
 	    $width=floor(250 / count($this->bpt_data['headers']));
 	    //Color and font restoration
 	    $this->SetFillColor(224);
 	    $this->SetTextColor(0);
 	    $this->SetFont('','','8');
 	    //Data
-	    $fill=false;
-	 	//exit('<pre>'.print_r($this->bpt_data,true) . '</pre>');
-		$x = $this->GetX();
-		$y = $this->GetY();
-		$leftMargin = $x;
+	    
+	 //exit('<pre>'.print_r($this->bpt_data,true) . '</pre>');
+		$fill=false;
 		//row
 	    foreach((array)$this->bpt_data['users'] as $user)
 	    {	
 	    //collums
+	    $col = 0;
 	    	foreach($this->bpt_data['headers'] as $column){
-	    	
-			    $this->SetY($y); //set pointer back to previous values
-				$this->SetX($x);
-				$x=$this->GetX()+$width;
-				$y=$this->GetY();
-	    	
-	    		$value=$wpdb->get_var('SELECT `data`.`value` FROM `'.$wpdb->prefix.'bp_xprofile_data` `data` WHERE `data`.`user_id` = '.$user.'  AND `data`.`field_id` ='. $column->id);
+		    	if($col){
+		    		$x = $this->GetX();
+		    		$y = $this->GetY();
+		    		$this->SetY($y-6);
+		    		$this->SetX($x+($col*$width));
+		    	}
+		    	$col++;
+	    		$value=$wpdb->get_var('SELECT `data`.`value` FROM `'.$bp->table_prefix.'bp_xprofile_data` `data` WHERE `data`.`user_id` = '.$user.'  AND `data`.`field_id` ='. $column->id);
 	    		$value=maybe_unserialize($value);
-	    	
-	    //$w=$this->GetStringWidth($value)+6;
-	    	
+	    	$fill=false;
 	    		if(is_array($value))
 	    			$value=implode(', ', $value);
 	    		$this->MultiCell($width,6,$value,'LR',0,'L',$fill);
-	    		//$this->Cell(20,10,'Title',1,1,'C');
 	    	}
-	    	
-	    	$y += 6;
-	    	$x = $leftMargin; // after columns set next line left margin to orginal margin.
-	    	
-	    	$this->Ln();
-		    $fill=!$fill;
+	 		
+		    $fill != $fill;
 	    }
 	}
 }
-?>

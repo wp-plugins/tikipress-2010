@@ -6,13 +6,10 @@
 function bpt_admin_pages_on_load() {
 	// Configure tab
 	add_meta_box( 'bpt-admin-metaboxes-config', __( 'Ticketing Category', 'bpt' ), 'bpt_admin_screen_ticketcategory', 'store_page_wpsc-buddypressticketing-settings');
-
 	// Stats tab
 	add_meta_box( 'bpt-admin-metaboxes-stats', __( 'Statistics', 'bpt' ), 'bpt_admin_screen_statistics', 'store_page_wpsc-buddypressticketing');
-	
 	//Attendees tab
 	add_meta_box( 'bpt-admin-metaboxes-attendees', __( 'Attendees', 'bpt' ), 'bpt_admin_screen_attendees', 'store_page_wpsc-buddypressticketing-attendess');
-	
 	//Export to pdf tab
 	add_meta_box( 'bpt-admin-metaboxes-pdf', __( 'Export to PDF', 'bpt' ), 'bpt_admin_screen_pdf', 'store_page_wpsc-buddypressticketing-pdf');
 	///badges
@@ -26,37 +23,37 @@ function bpt_admin_pages_on_load() {
 // Dashboard Widget for ticket sales
 
 function bpt_ticket_sales_dashboard_widget() {
-	$url ='/wp-admin/';
-	$admin_url= get_admin_url();
+$url ='/wp-admin/';
+$admin_url= get_admin_url();?>
+<div id="bpt_dashboard_info"> <?php
+
+	$product_id = bpt_select_event_dropdown($url);
 	
-echo '<div id="bpt_dashboard_info">';
-		$product_id = bpt_select_event_dropdown($url);
-		$users = bpt_get_registered_users( $product_id, true ); 
-		
-		if((float)WPSC_VERSION >= 3.8 )
-			$ticket_total = get_post_meta($product_id, '_wpsc_stock', true); 
-		else{
-			$sql=  'SELECT `quantity` FROM `'.$wpdb->prefix . 'wpsc_product_list` WHERE `id` = '.$product_id[0];
-			$ticket_total = $wpdb->get_results( $sql ) ;
-			$ticket_total = $ticket_total[0]->quantity;
-		}
-		
-		$tickets_sold = bpt_get_quantities_sold($product_id);
-		$remaining_tickets = ($ticket_total - $tickets_sold);
-		
-		echo '<br /><br /><span class="btp_dashboard_stat"><strong> Total Tickets: </strong>' . $ticket_total . '</span>';
-		echo '<span class="btp_dashboard_stat"><strong>Total Attendees so far: </strong>' . $tickets_sold . '</span>';
-		echo '<span class="btp_dashboard_stat"><strong>Tickets Remaining: </strong>' . $remaining_tickets . '</span><br /><br />';
-		echo '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing&tab=attendees">See a List of Event Attendee\'s</a></span>';
-		echo '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing">See All Event Statistics</a></span>'; 
-echo'</div>';
+	$users = bpt_get_registered_users( $product_id, true ); 
+
+	if((float)WPSC_VERSION >= 3.8 )
+		$ticket_total = get_post_meta($product_id, '_wpsc_stock', true); 
+	else
+	{
+		$sql=  'SELECT `quantity` FROM `'.$wpdb->prefix . 'wpsc_product_list` WHERE `id` = '.$product_id[0];
+		$ticket_total = $wpdb->get_results( $sql ) ;
+		$ticket_total = $ticket_total[0]->quantity;
+	}
 	
-echo'<div id="bpt_dashboard_graph">';
+	$tickets_sold = bpt_get_quantities_sold($product_id);
+	$remaining_tickets = ($ticket_total - $tickets_sold);
+
+	echo '<br /><br /><span class="btp_dashboard_stat"><strong> Total Tickets: </strong>' . $ticket_total . '</span>';
+	echo '<span class="btp_dashboard_stat"><strong>Attendees so far: </strong>' . $tickets_sold . '</span>';
+	echo '<span class="btp_dashboard_stat"><strong>Tickets Remaining: </strong>' . $remaining_tickets . '</span><br /><br />';
+	echo '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing&tab=attendees">See a List of Event Attendee\'s</a></span>';
+	echo '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing">See All Event Statistics</a></span>';
+?> </div>
+
+<div id="bpt_dashboard_graph"><?php
 	echo '<div id="attendeeGraph">';
 		echo '<img src="http://chart.apis.google.com/chart?chs=300x150&cht=p3&chd=t:'.number_format($tickets_sold/1000,3).','.number_format(($ticket_total-$tickets_sold)/1000,3).'&chdl=Sold|Left&chp=0.628&chl=' . $tickets_sold . '|' . ($ticket_total - $tickets_sold) . '&chtt=Attendance">';
-	echo '</div>';
-echo '</div>';
-echo '<div class="clear"> </div>';
+		echo '</div></div> <div class="clear"> </div>';
 		
 } 
 
@@ -101,13 +98,15 @@ function bpt_admin_register_settings() {
  * @param array $new_settings An array with changed settings
  */
 function bpt_admin_validate( $new_settings ) {
-//exit (print_r($_POST,1));
+
+//exit('<pre>'.print_r($_FILES,1).'</pre>'.'<pre>'.print_r($new_settings,1).'</pre>');
+
 	//if this is export to PDF page or badges pdf, then just output PDF, no need to return anything.
 	if ( $_POST['bpt_pdf'] )
 		bpt_pdf($new_settings);
 		
 	if($_POST['bpt_badges_pdf'])
-		bpt_badges_pdf($new_settings);
+		bpt_badges_pdf($new_settings,$_FILES);
 		
 	if($_POST['submit_email'])
 		bpt_send_email($_POST);
@@ -117,8 +116,16 @@ function bpt_admin_validate( $new_settings ) {
 
 	if ( isset( $new_settings['ticket_category'] ) )
 			$new_settings['ticket_category'] = (int) $new_settings['ticket_category'];
-					
-	return wp_parse_args( $new_settings, get_blog_option( BP_ROOT_BLOG, 'bpt' ) );
+		//return	$new_settings;		
+	$settings = wp_parse_args( $new_settings, get_blog_option( BP_ROOT_BLOG, 'bpt' ) );	
+//exit (print_r($settings,1));
+	//IF MS
+	if( WP_MULTISITE )
+		update_option('ticket_category', $new_settings['ticket_category']);
+	else	
+	//SAVE THROUGH UPDATE_OPTION
+	//ELSE
+		return $settings;
 }
 
 
@@ -206,7 +213,7 @@ function bpt_admin() {
 			</div>
 		<?php endif; ?>
 
-		<form method="post" action="options.php" id="wpsc-buddypressticketing">
+		<form enctype="multipart/form-data" method="post" action="options.php" id="wpsc-buddypressticketing">
 			<?php wp_nonce_field( 'closedpostboxes', 'closedpostboxesnonce', false ) ?>
 			<?php wp_nonce_field( 'meta-box-order', 'meta-box-order-nonce', false ) ?>
 			<?php settings_fields( 'bpt-settings-group' ) ?>
@@ -248,14 +255,24 @@ function bpt_admin() {
  * @param array $settings Array containing bpt settings
  */
 function bpt_admin_screen_ticketcategory( $settings ) {
+
+	if( WP_MULTISITE )
+		$settings = get_option('ticket_category');
+	else
+		$settings = maybe_unserialize($settings);
+		
 	$categories = bpt_wpsc_get_categories();
-	$settings = maybe_unserialize($settings);
+	
+	
+
 ?>	<h2>Ticket Category</h2>
 	<p><label for="ticket_category"><?php _e( "Select the category to use for ticketing:", 'bpt' ) ?></label></p>
 
 	<select name="bpt[ticket_category]">
 	<?php
+
 	foreach ( (array) $categories as $cat ) {
+
 		$selected = '';
 		if ( $settings['ticket_category'] == $cat['id'] || $settings['ticket_category'] == $cat['term_id'] )
 			$selected = "selected='selected'";
@@ -280,15 +297,17 @@ function bpt_admin_screen_ticketcategory( $settings ) {
  * @param array $settings Array containing bpt settings
  */	
 function bpt_admin_screen_statistics( $settings ) {
-	global $wpdb;
+	global $wpdb, $bp;
 	
 	echo'<div class="float_left">';
 	$url ='/wp-admin/admin.php?page=wpsc-buddypressticketing&event=';
 	$product_id = bpt_select_event_dropdown($url);
 	$users = bpt_get_registered_users( $product_id, true );
 
-	if((float)WPSC_VERSION >= 3.8 )
+	if((float)WPSC_VERSION >= 3.8 ){
 		$ticket_total = get_post_meta($product_id, '_wpsc_stock', true); 
+		$ticket_price = get_post_meta($product_id, '_wpsc_price', true); 
+		}
 	else
 	{
 		$sql=  'SELECT `quantity` FROM `'.$wpdb->prefix . 'wpsc_product_list` WHERE `id` = '.$product_id[0];
@@ -298,6 +317,7 @@ function bpt_admin_screen_statistics( $settings ) {
 	
 	$tickets_sold = bpt_get_quantities_sold($product_id);
 	$remaining_tickets = ($ticket_total - $tickets_sold);
+	$total_revenue = ($tickets_sold * $ticket_price );
 
 	//echo $product_id;
 	echo '<h2>Ticket stock control</h2>';
@@ -307,6 +327,7 @@ function bpt_admin_screen_statistics( $settings ) {
 	
 	echo '<p> Sold: (' .$tickets_sold .'/' . $ticket_total . ')</p>';
 	echo '<p> Remaining Tickets: ' . $remaining_tickets . '</p>';
+	echo '<p> Total Revenue gathered for this event: $' . $total_revenue . '</p>';
 	
 
 	?> 	<h2>Tiki profile feilds </h2>
@@ -315,8 +336,8 @@ function bpt_admin_screen_statistics( $settings ) {
 	 in statistics, other information will be show per user.</small></p>
 	<?php
 	$sql = 'SELECT  `data`.`value` ,  `fields`.`name` , COUNT( * ) as count 
-			FROM  `' . $wpdb->prefix . 'bp_xprofile_data` `data` 
-			JOIN  `' . $wpdb->prefix . 'bp_xprofile_fields` `fields` ON  `data`.`field_id` =  `fields`.`id` 
+			FROM  `' . $bp->table_prefix . 'bp_xprofile_data` `data` 
+			JOIN  `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` ON  `data`.`field_id` =  `fields`.`id` 
 			WHERE user_id
 			IN (' . implode ( ',', $users ) . ') 
 			AND  `fields`.`type` 
@@ -365,14 +386,14 @@ function bpt_admin_screen_statistics( $settings ) {
  * @param array $settings Array containing bpt settings
  */
 function bpt_admin_screen_attendees( $settings ) {
-		global $wpdb;
+		global $wpdb, $bp;
 		
 		//this url is used in the function select drop down list
 		$url ='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=attendees&event=';
 	
 		if ( isset( $_GET['user'] ) ) {
 			$user = get_userdata( $_GET['user'] );
-			$sql = 'SELECT `fields`.`name`, `data`.`value` FROM `' . $wpdb->prefix . 'bp_xprofile_data` `data` INNER JOIN `' . $wpdb->prefix . 'bp_xprofile_fields` `fields` ON `data`.`field_id` = `fields`.`id` WHERE `data`.`user_id`=' . absint( $_GET['user'] ) . ' AND `fields`.`name` != "Name"';
+			$sql = 'SELECT `fields`.`name`, `data`.`value` FROM `' . $bp->table_prefix . 'bp_xprofile_data` `data` INNER JOIN `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` ON `data`.`field_id` = `fields`.`id` WHERE `data`.`user_id`=' . absint( $_GET['user'] ) . ' AND `fields`.`name` != "Name"';
 			$profile_fields = $wpdb->get_results( $sql ); ?>
 			
 			<h2><?php echo get_avatar( $user->user_email , '50' );?> <?php echo $user->display_name; ?></h2><?php
@@ -391,9 +412,10 @@ function bpt_admin_screen_attendees( $settings ) {
 	echo '<div class="left">';
 	
 		$product_id = bpt_select_event_dropdown($url);
-		$users=bpt_get_registered_users( $product_id );
+		$users = bpt_get_registered_users( $product_id );
 		
-
+		//exit('<pre>'.print_r($users,1).'</pre>');
+		
 		if(count($users) > 0){
 			register_column_headers( 'attendees' ,$columns ); ?>
 		<table class="widefat fixed" cellspacing="0">
@@ -595,33 +617,25 @@ function bpt_admin_screen_help_page(){
 	<?php
 }
 
-
-/**
- * Adds metabox to wpsc product editing page
- *
- */
-function bpt_add_events_wpec_products_page() {
-	add_meta_box( "bpt_wpsc_product_event", __( 'BuddyPress Tickets', 'wpsc' ), "bpt_add_events_wpec_products_pages", "wpsc" );
-	do_meta_boxes( 'wpsc', 'advanced', null ); 
-}
-		
-
 /**
  * Metabox function for wpsc product editing page
  * @param int $product_id Product id
  */
-function bpt_add_events_wpec_products_pages( $product_id ) { 
-	global $wpdb;
+function bpt_add_events_wpec_products_pages( $product  ) { 
 
+	global $wpdb;
+	$product_id = $product->ID;
 	if ( absint( $product_id ) ) {
-		update_post_meta( $product_id, '_bpt_event_prod_id', $_POST['event_ticket'] );
-		return true;
+		//update_post_meta( $product_id, '_bpt_event_prod_id', $_POST['event_ticket'] );
+		echo "You have already selected an event for this product!";
+		//return true;
 	}
-	
+	//move this to its own function
 		$sql = "SELECT `posts`.`ID`, `posts`.`post_title`, `posts`.`post_status` FROM `" . $wpdb->prefix . "posts` `posts` WHERE `posts`.`post_type` = 'ep_event'";
 		$events = $wpdb->get_results( $sql ) ;
-		$event_id = get_post_meta( absint( $_REQUEST['product_id'] ), '_bpt_event_prod_id', true );
 		
+		$event_id = get_post_meta( $product_id, '_bpt_event_prod_id', true );
+	
 		echo '<P>Select the Event that this ticket product is for </p>';
 		
 			foreach ( (array) $events as $event ){
@@ -633,16 +647,36 @@ function bpt_add_events_wpec_products_pages( $product_id ) {
 		echo '<p><small>NOTE: You must create the event before you create the ticket product</small></p>';		
 }
 
-add_action( 'wpsc_edit_product', 'bpt_add_events_wpec_products_pages', 10, 1 );			
+
+
+	function wpsc_new_meta_boxes() {
+
+		add_meta_box( 'bpt_add_events_wpec_products_pages', 'Buddy Press Tickets', 'bpt_add_events_wpec_products_pages', 'wpsc-product', 'normal', 'high' , 1);
+	}
+add_action( 'add_meta_boxes', 'wpsc_new_meta_boxes');
+
+function bpt_admin_submit_product( $post_ID, $post ) {
+	global $current_screen, $wpdb;
+	//exit( '<pre> event id is'.print_r($_POST,1).'</pre>');
+	if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || $current_screen->id != 'wpsc-product' )
+		return $post_ID;
+	
+		update_post_meta( $post_ID, '_bpt_event_prod_id', $_POST['event_ticket'] );
+
+	}
+
+add_action( 'save_post', 'bpt_admin_submit_product', 10, 2 );
+	
+	
+//add_action( 'wpsc_edit_product', 'bpt_add_events_wpec_products_pages', 10, 1 );			
 
 /**
  * Get ticket fields
  * Selects all the buddy press profile fields that are used for tickets
  */
 function bpt_get_ticket_fields() {
-	global $wpdb;
-	$fields=$wpdb->get_results( 'SELECT `fields`.`name`, `fields`.`id` FROM `' . $wpdb->prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id`=0' );
-
+	global $wpdb, $bp;
+	$fields=$wpdb->get_results( 'SELECT `fields`.`name`, `fields`.`id` FROM `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id`=0' );
 	return $fields;
 }
 
@@ -655,6 +689,7 @@ function bpt_admin_screen_pdf( $settings, $product_id) {
 	$url='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=pdf&event=';
 	$product_id = bpt_select_event_dropdown($url); ?>
 	<form name="bpt_pdf" method="post" enctype="multipart/form-data"  action="">
+	
 	
 		<?php $fields = bpt_get_ticket_fields();  
 		
@@ -673,126 +708,200 @@ function bpt_admin_screen_pdf( $settings, $product_id) {
 <?php
 }
 
+
 /**
  * Badges PDF metabox
  * @param array $new_settings An array with changed settings
  */
 function bpt_admin_screen_badges( $settings, $product_id ) {
-	global $wpdb;
-	$url='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=badges&event='; ?>
+	global $wpdb, $bp;
+	$url='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=badges&event='; 
+	$user_details = wp_get_current_user();
+	$user_email=$user_details->data->user_email;
 	
-	<div class="float_left" id="badges_options">
-	<?php $product_id = bpt_select_event_dropdown($url); ?>
-		<br /><p><?php _e('Select the attendee data you would like to display on your ticket / badge, the template position number relates to the template. If you don\'t want to use all the template areas then leave them blank' , 'bpt');?></p>
+    ?>
 
-<table>
-	<form name="bpt_badges_pdf" method="post" enctype="multipart/form-data"  action="">
-	
-	<tr>
-		<td><label for 'bpt_badges_pdf'>Upload your logo:</label></td>
-		<td> <input type="file" id="fUpload" name="fUpload" />
-	</tr>
-	
-	<tr>
-		<td>Show Gravitar</td>
-		<td class='badges_pdf'>Yes<input type='radio' checked = 'checked' name='badges_gravatar' value='1' >No<input type='radio' name='badges_gravatar' value='0' ></td>
-	</tr>
-	
-	<?php
-/* 	these fields are collected from gravatar or the user account and not the buddypress profile feilds like the event data */
-	$extra_fields = array(
-	   array(name => "Twitter Id", id => 'badges_twitter',),
-	   array(name => "Site Link", id => 'badges_site',),
-	   array(name => "Email Address", id => 'badges_email',)
-	);
-	
-	foreach ((array)$extra_fields as $field ) {
-	?>	
-		<tr>
-			<?php echo '<td>'.$field[name] . '</td>';
-			$value= $field[id];
+    <div class="float_left" id="badges_options">
+    <p><?php _e('To use the badge generator first select the event you would like to create the ticket for, then select which information you would like to use on your badge. You should see a live preview - once your happy with it export it to a pdf', 'bpt');?></p>
+	<p><?php $product_id = bpt_select_event_dropdown($url); ?></p>
+		<br />
+				<label for='bpt_badges_pdf'>Upload your logo:</label>
+					<input type="file" name="logo_upload" /> 	
+			<table>
+				<tr id="grav">
+					<td>Show Gravitar</td>
+					<td class="grav_radio"> Yes <input type='radio' name='badges_gravatar' value='1' >  No <input type='radio' checked = 'checked' name='badges_gravatar' value='0' ></td>
+				</tr>
 			
-			for($i=1; $i < 8; $i++){
-				if($i == 1)
-					echo'<td class="badges_pdf">';
-				/* 	set the default settings as per the eg template */
-				if ($field['id'] == 'badges_twitter' && $i == 3)
-					echo "$i<input checked = 'checked' type='radio' name='bpt[fields][".$i."]' value='".$value."'> ";
-					
-				elseif ($field['id'] == 'badges_email' && $i == 4)
-					echo "$i<input checked = 'checked' type='radio' name='bpt[fields][".$i."]' value='".$value."'> ";
-					
-				elseif ($field['id'] == 'badges_site' && $i == 5)
-					echo "$i<input checked = 'checked' type='radio' name='bpt[fields][".$i."]' value='".$value."'> ";
-				else
-					echo "$i<input type='radio' name='bpt[fields][".$i."]' value=' ".$value."' > ";
-				if($i == 7)
-					echo'</td></div>';
-			}
-		echo '</tr>';
-	 } 
-	// get the extra ticket feilds from the bp profile data
-	$fields= bpt_get_ticket_fields();
-	 
-	foreach ((array) $fields as $field ) {
-		$selected='';?>
-			<tr>
-				<?php echo '<td>'.$field->name . '</td>';
-				$value= $field->id;
-				create_badges_radio_button($value, $settings, $field);
-			echo'</tr>';
-	} ?>
-		
-		<input type="hidden" name="bpt_badges_pdf" value="true" />
-		<p><input type="submit" class="button-primary" value="<?php _e( 'Export badges as PDF', 'bpt' ); ?>" /></p>
-		</form>
-	</table>
-</div>
-
-<div class="float_left_img">
-	<p><strong>Badges Template</strong></p>
-	<?php $template_url = plugins_url('templates/bpt/badges/badges_template.jpg', __FILE__);
-	echo "<img src='" . $template_url."' alt='badges_template'/>" ; ?>
-</div>
-
-<div class="float_left_img">
-	<p><strong>Example using the default settings</strong></p> 
+				<?php
+				/* 	these fields are collected from gravatar or the user account and not the buddypress profile feilds like the event data */
+				$extra_fields = array(
+				array(name => "Twitter Id", id => 'badges_twitter',),
+				array(name => "Site Link", id => 'badges_site',),
+				array(name => "Email Address", id => 'badges_email',)
+				);
+				
+			
+				$fields= bpt_get_ticket_fields();
+				$all_feilds = array_merge($extra_fields, $fields);
+			
+					for($j=0; $j < count($all_feilds); $j++){
+					$select_id = 'Select'.($j+1) ;
+					$select_name = "bpt[fields][".$value."]"; 
+					echo '<tr class="bpt_template_select_row">';
+					if($j < 3){
+						echo '<td class="bpt_template_select">'.$all_feilds[$j]['name'] . '</td>';
+						$value = $all_feilds[$j]['id'];
+					}else{
+						echo '<td class="bpt_template_select">'.$all_feilds[$j]->name . '</td>';
+						$value = $all_feilds[$j]->id;
+					}
+					$select_name = "bpt[fields][".$value."]"; 
+				
+					 ?>	<td class="bpt_template_select"> <select id="<?php echo $select_id ?>" name="<?php echo $select_name ?>" onchange="javascript:SelectBoxes(this);">
 	
-	<?php $example_url = plugins_url('templates/bpt/badges/wordcamp-ticket-badge.jpg', __FILE__);
-	echo "<img src='" . $example_url."' alt='badges_template'/>" ; ?>
+					<?php echo "<option value='exclude' selected='selected'>Exclude</option>";
+	  					//for each template posistion create that option will need to be not hard coded when more templates are added
+	  				for($i=1; $i < 8; $i++){
+						echo '<option value="' . $i . '"> Template Area ' . $i . '</option>';
+	  				}
+
+
+	 				 }
+					echo "</select> </td></tr>"; ?>
+
+						
+				
+		</table>
+		<input type="hidden" name="bpt_badges_pdf" value="true" />
+					<input type="submit" class="button-primary" value="<?php _e( 'Export badges as PDF', 'bpt' ); ?>" />
+		
+</div>
+<?php $user_data = get_user_preview_data($all_feilds); ?>
+
+
+
+<div class="float_left_img2">
+<p><strong>Your Super Cool Badge Builder</strong></p>
+<p>Below is a preview of your badge and current settings - change the template options to change the look of your badge! Don't forget to export when your happy with it!</p>
+<!-- these are the divs that get shown and hidden they can probably be moved into another template file (with their own css sheet) as more templates will be added -->
+<div class="template_area">
+<?php $template_url = plugins_url('templates/bpt/badges/wordcamp-ticket-badge.jpg', __FILE__);
+echo "<img id='background_badge' src='" . $template_url."' alt='badges_template' />" ; ?>
+
+<div class="show_avatar">
+	 <div id="show_avatar" class="" style="display: block">
+        <?php echo get_avatar( $user_email , '50' ); ?>
+     </div>
+</div>
+<div class="area1_container">
+    <div id="1" class="area1" style="display: none">
+       <strong></strong>
+    </div>
+</div>
+
+
+<div class="area2_container">
+    <div id="2" class="area2" style="display: none"></div>	
+</div>
+<div class="area_container">
+   	 <div id="6" class="area6" style="display: none"></div>
+</div>
+<div class="area3_container">
+    <div id="3" class="area3" style="display: none">
+        <strong></strong>
+    </div>
+</div>
+<div class="area_container">
+    <div id="4" class="area4" style="display: none">
+        
+     </div>
+</div>
+<div class="area_container">
+     <div id="5" class="area5" style="display: none">
+       <strong></strong> 
+     </div>
+</div>
+<div class="area7_container">
+	 <div id="7" class="area7" style="display: none">
+       
+     </div>
+</div>
+
+</div>
+</div>
+
+
+<div class="float_left_img">
+	<p><strong>Area Guide</strong></p>
+	<p>Use the area guide to see the location of the different template positions</p>
+	<?php $template_url = plugins_url('templates/bpt/badges/badges_template.jpg', __FILE__);
+	echo "<img width='200px' src='" . $template_url."' alt='badges_template' />" ; ?>
 </div>
 
 <div class='clear'></div>
 
 <?php }
 
-/* Generates Radio buttons based on field id's */
-function create_badges_radio_button($value, $settings,$field) {
+/* gets out the current users info and creates a js array used to generate the text into the badge preview */
+function get_user_preview_data($all_feilds){
 
-	for($i=1; $i < 8; $i++){
-		if($i == 1)
-			echo'<td class="badges_pdf">';
-		
-//create a default layout for pdf badges and generate radio buttons unselected for the rest
-		
-		if ($field->name == 'First name' && $i == 1)
-			echo "$i<input checked = 'checked' type='radio' name='bpt[fields][".$i."]' value='".$value."'> ";
-			
-		elseif ($field->name == 'Last name' && $i == 2)
-			echo "$i<input checked = 'checked' type='radio' name='bpt[fields][".$i."]' value='".$value."'> ";
-			
-		elseif ($field->name == 'How would you describe yourself' && $i == 7)
-			echo "$i<input checked = 'checked' type='radio' name='bpt[fields][".$i."]' value='".$value."'> ";
-		
-		elseif ($field->name == 'How long have you been using WordPress' && $i == 6)
-			echo "$i<input checked = 'checked' type='radio' name='bpt[fields][".$i."]' value='".$value."'> ";
+global $bp;
+//if current user not registered need to use first regerstees deets :)
+$user_id = $bp->loggedin_user->id;
+$current_user_profile = bpt_get_users_profile_data($user_id) ;
+$user_email = $bp->loggedin_user->userdata->user_email;
+	
+		$twitter_id = '';
+		//$user_email = $user->user_email;
+			/* connect to gravatar to get the user site address, twitter id - this code can be refactored to be used with the badges pdf*/
+
+		$usermd5=md5( strtolower( trim( $user_email ) ) );	
+		$old_track = ini_set('track_errors', '1');
+		if(!$str = @file_get_contents( 'http://www.gravatar.com/'.$usermd5.'.php' ))
+			$profile=0;
 		else
-			echo "$i<input type='radio' name='bpt[fields][".$i."]' value=' ".$value."' > ";
+			$profile = unserialize( $str );
+		
+		ini_set('track_errors', $old_track);
 
-		if($i == 7)
-			echo'</td></div>';
+		//check if the users have a gravatar profile before trying to get their info
+		if ($profile != 'User not found'){
+			$user_url=($url)?$url:$profile['entry'][0]['urls'][0]['value'];
+				foreach((array)$profile['entry'][0]['accounts'] as $account){
+					if($account["domain"]=="twitter.com")
+						$twitter_id = $account["display"];
+				}
 		}
+		
+				if (!$twitter_id)
+					$twitter_id = "@Twitter";
+				
+				if(!$user_url)
+					$user_url = "www.example.com";
+				
+				if(!$user_email)
+					$user_email = "example@mail.com";
+		
+				//this function here is generating a js array echoed to the page based on the option values for the logged in user this only relates for the default install of tikipress feilds the frist name and lastname feilds have been moved as the order is different from how they appear - this is why there is the +2 and -2 This is scrappy and will need to be fixed to work with custom feilds etc.
+					echo '<script> var arrValues=new Array("'.$twitter_id.'","'.$user_url.'","'.$user_email.'",';
+				for($j=0; $j < count($current_user_profile); $j++){
+					if($j == count($current_user_profile)-1)
+					echo '"'.$current_user_profile[2]['value'].'"';
+					elseif($j == count($current_user_profile)-2)
+					echo '"'.$current_user_profile[1]['value'].'",';
+					elseif($j == 1)
+					echo '"'.$current_user_profile[$j+2]['value'].'",';
+					elseif($j == 2)
+					echo '"'.$current_user_profile[$j+2]['value'].'",';
+					elseif($j == count($current_user_profile)-2)
+					echo '"'.$current_user_profile[1]['value'].'",';
+				else
+					echo '"'.$current_user_profile[$j+2]['value'].'",';
+				}
+				echo '); </script>';
 }
+
 
 /**
  * Event selection dropdown
@@ -841,22 +950,16 @@ function bpt_pdf($settings) {
 	$pdf->AliasNbPages();
 	
 	//load data
-	$pdf->LoadData( $settings);
-	
+	$pdf->LoadData($settings);
 	$pdf->SetFont( 'Arial', '', 8);
 	$pdf->AddPage(L);
 	$pdf->PrintTable();
-
 	$pdf->Output();
 	exit();
 }
 
-/**
- * Output Badges PDF Needs finishing
- *
- */
-
-function bpt_badges_pdf($settings){
+function bpt_badges_pdf($settings, $files){
+//exit('<pre> testdollafiles'.print_r($files,true).'</pre>'.'<pre> test'.print_r($settings,true).'</pre>');
 	global $wpdb;
 
 @ini_set('log_errors','on');
@@ -881,6 +984,7 @@ $pdf->SetAutoPageBreak(0);
 $counter = 1;
 
 for ( $i = 0; $i < count($attendees); $i++ ) {
+$default = WP_CONTENT_DIR.'/plugins/'.WPSC_TICKETS_FOLDER.'/images/default.jpg';
 
 		// Set the text color to black.
 		$pdf->SetTextColor(223,125,80);
@@ -888,11 +992,10 @@ for ( $i = 0; $i < count($attendees); $i++ ) {
 		// Grab the template file that will be used for the badge page layout
 		//for here and now if you wanted to use your own template put it in the same directory and replace the file name
 		require('templates/sf2010.php');
-
+		
 		// Download and store the gravatar for use, FPDF does not support gravatar formatted image links the user email has been saved into array[7] ready to go just for this reason!
 		$grav_file_raw = WP_CONTENT_DIR.'/plugins/'.WPSC_TICKETS_FOLDER.'/images/temp/' . $attendees[$i][0] . '-' . rand();
-		$grav_url = 'http://www.gravatar.com/avatar/' . md5($attendees[$i][7]) . '?s=512&default=http%3A%2F%2F2010.sf.wordcamp.org%2Fblank.jpg';
-	//	exit('Data from Gravatar '.$grav_url);
+		$grav_url = 'http://www.gravatar.com/avatar/' . md5($attendees[$i][7]) . '?s=512&d=mm';
 		$grav_data = get_file_by_curl( $grav_url, $grav_file_raw );
 
 		// Check if the image is a png, if it is, convert it, otherwise add a JPG extension to the raw filename
@@ -901,8 +1004,13 @@ for ( $i = 0; $i < count($attendees); $i++ ) {
 			$grav_file = $grav_file_raw . $grav_file_extension;
 			rename( $grav_file_raw, $grav_file );
 		}
+		if (isset($files)){
+			$back_path = $pdf->LoadBadgeImage($files);
+		}else{
+			$back_path = WP_CONTENT_DIR.'/plugins/'.WPSC_TICKETS_FOLDER.'/images/badgelogo2.jpg';
+		}
 		// Add the background image for the badge to the page
-		$back_path = WP_CONTENT_DIR.'/plugins/'.WPSC_TICKETS_FOLDER.'/images/badgelogo2.jpg';
+	
 		$pdf->image($back_path, $background_x, $background_y, 2.8, 1.23);
 
 		//set all images to the man.jpg for testing
@@ -914,12 +1022,14 @@ for ( $i = 0; $i < count($attendees); $i++ ) {
 		// Set the co-ordinates, font $attendees[$i][0] [0] relates to template area 1 and so on.
 		$pdf->SetXY($text_x, $text_y);
 		$pdf->SetFont('helvetica','b',28);
+		$pdf->SetTextColor(51,51,51);
 		$pdf->MultiCell(0, 0,ucwords(stripslashes($attendees[$i][0])),0,'L');
 
 
 		$pdf->SetXY($text_x, $text_y + 0.35);
 		$pdf->SetFont('helvetica','',18);
-		$pdf->SetTextColor(126,193,246);
+		//change area two font color
+		$pdf->SetTextColor(55,153,153);
 		$pdf->MultiCell(0, 0,stripslashes(ucwords($attendees[$i][1])),0,'L');
 
 		$pdf->SetXY($infotext_x, $infotext_y);
@@ -943,8 +1053,8 @@ for ( $i = 0; $i < count($attendees); $i++ ) {
 		$pdf->SetXY($years_x + 0.21, $years_y);
 		$pdf->SetFont('helvetica','',8);
 		$pdf->MultiCell( 2.4, 0.21, stripslashes($attendees[$i][5]), 0, 'R' );
-
-		$pdf->SetFillColor( 126, 193, 246 );
+		//change bottom fotter background color
+		$pdf->SetFillColor( 55, 153, 153 );
 		$pdf->Rect( $typebox_x, $typebox_y, 3, 0.5, 'F' );
 
 		$pdf->SetTextColor(255, 255, 255);
