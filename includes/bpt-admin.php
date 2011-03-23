@@ -21,52 +21,62 @@ function bpt_admin_pages_on_load() {
 
 
 // Dashboard Widget for ticket sales
-
 function bpt_ticket_sales_dashboard_widget() {
+
 $url ='/wp-admin/';
-$admin_url= get_admin_url();?>
-<div id="bpt_dashboard_info"> <?php
+$admin_url= get_admin_url();
 
-	$product_id = bpt_select_event_dropdown($url);
-	
-	$users = bpt_get_registered_users( $product_id, true ); 
+$product_id = bpt_select_event_dropdown($url);
+$users = bpt_get_registered_users( $product_id, true );
 
-	if((float)WPSC_VERSION >= 3.8 )
-		$ticket_total = get_post_meta($product_id, '_wpsc_stock', true); 
-	else
-	{
-		$sql=  'SELECT `quantity` FROM `'.$wpdb->prefix . 'wpsc_product_list` WHERE `id` = '.$product_id[0];
-		$ticket_total = $wpdb->get_results( $sql ) ;
-		$ticket_total = $ticket_total[0]->quantity;
-	}
-	
-	$tickets_sold = bpt_get_quantities_sold($product_id);
-	$remaining_tickets = ($ticket_total - $tickets_sold);
+$tickets_sold = bpt_get_quantities_sold($product_id);
+$ticket_total = bpt_get_ticket_total($product_id);
+$remaining_tickets = ($ticket_total - $tickets_sold);
+$class = "";
 
-	echo '<br /><br /><span class="btp_dashboard_stat"><strong> Total Tickets: </strong>' . $ticket_total . '</span>';
-	echo '<span class="btp_dashboard_stat"><strong>Attendees so far: </strong>' . $tickets_sold . '</span>';
-	echo '<span class="btp_dashboard_stat"><strong>Tickets Remaining: </strong>' . $remaining_tickets . '</span><br /><br />';
-	echo '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing&tab=attendees">See a List of Event Attendee\'s</a></span>';
-	echo '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing">See All Event Statistics</a></span>';
-?> </div>
 
-<div id="bpt_dashboard_graph"><?php
-	echo '<div id="attendeeGraph">';
-		echo '<img src="http://chart.apis.google.com/chart?chs=300x150&cht=p3&chd=t:'.number_format($tickets_sold/1000,3).','.number_format(($ticket_total-$tickets_sold)/1000,3).'&chdl=Sold|Left&chp=0.628&chl=' . $tickets_sold . '|' . ($ticket_total - $tickets_sold) . '&chtt=Attendance">';
-		echo '</div></div> <div class="clear"> </div>';
+$html = '<div id="bpt_dashboard_info">';
+$html.= '<br /><br /><span class="btp_dashboard_stat"><strong> Total Tickets: </strong>' . $ticket_total . '</span>';
+$html.= '<span class="btp_dashboard_stat"><strong>Attendees so far: </strong>' . $tickets_sold . '</span>';
+$html.= '<span class="btp_dashboard_stat"><strong>Tickets Remaining: </strong>' . $remaining_tickets . '</span><br /><br />';
+$html.= '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing&tab=attendees">See a List of Event Attendee\'s</a></span>';
+$html.= '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing">See All Event Statistics</a></span>';
+$html.= '</div>';
+
+$html.= bpt_display_graph($tickets_sold,$ticket_total,$class);
+
+echo $html;
 		
 } 
 
-// Create the function use in the action hook
+/**
+ * bpt_add_dashboard_widgets
+ *
+ * function for the wp_dashboard_setup widget hook
+ * 
+ */
 
 function bpt_add_dashboard_widgets() {
 	wp_add_dashboard_widget('ticket_sales', 'Ticket Sales', 'bpt_ticket_sales_dashboard_widget');	
 } 
-
-// Hook into the 'wp_dashboard_setup' action to register our other functions
-
 add_action('wp_dashboard_setup', 'bpt_add_dashboard_widgets' );
 
+
+/**
+ * bpt_display_graph
+ *
+ * @param int tickets sold, ticket total (for the selected event) $class string class name for graph
+ * @return html statisitcs graph
+ */
+
+function bpt_display_graph($tickets_sold,$ticket_total,$class){
+
+$html.='<div id="attendeeGraph" class="'.$class.'">';
+$html.='<img src="http://chart.apis.google.com/chart?chs=300x150&cht=p3&chd=t:'.number_format($tickets_sold/1000,3).','.number_format(($ticket_total-$tickets_sold)/1000,3).'&chdl=Sold|Left&chp=0.628&chl=' . $tickets_sold . '|' . ($ticket_total - $tickets_sold) . '&chtt=Attendance">';
+$html.='</div>';
+$html.='<div class="clear"></div>';
+return $html;
+}
 
 
 /**
@@ -74,14 +84,14 @@ add_action('wp_dashboard_setup', 'bpt_add_dashboard_widgets' );
 Remove the menu for event press registrations, we want to use our registration page!
 *
 */
-function remove_menu() {
+function bpt_remove_menu() {
 	global $menu;
-
+	
 		if (class_exists('ep_admin_menus')) {
 		unset($menu[31]);
 		}
 	}
-add_action('admin_head', 'remove_menu');
+add_action('admin_head', 'bpt_remove_menu');
 
 /**
  * Register settings group with WordPress settings API.
@@ -373,11 +383,9 @@ function bpt_admin_screen_statistics( $settings ) {
 	echo '</div>';
 	
 /* 	This graph came from wp event ticketing */
-
-		echo '<div class="float_left" id="attendeeGraph">';
-		echo '<img src="http://chart.apis.google.com/chart?chs=300x150&cht=p3&chd=t:'.number_format($tickets_sold/1000,3).','.number_format(($ticket_total-$tickets_sold)/1000,3).'&chdl=Sold|Left&chp=0.628&chl=' . $tickets_sold . '|' . ($ticket_total - $tickets_sold) . '&chtt=Attendance">';
-		echo '</div>';
-		echo '<div class="clear"> </div>';
+$class="float_left";
+$html= bpt_display_graph($tickets_sold,$ticket_total,$class);
+echo $html;
 }
 
 
@@ -624,9 +632,13 @@ function bpt_admin_screen_help_page(){
 function bpt_add_events_wpec_products_pages( $product  ) { 
 
 	global $wpdb;
-	$product_id = $product->ID;
+	$product_id = $product->id;
+	
+	//$product_id = $product->ID;
+
+	
 	if ( absint( $product_id ) ) {
-		//update_post_meta( $product_id, '_bpt_event_prod_id', $_POST['event_ticket'] );
+
 		echo "You have already selected an event for this product!";
 		//return true;
 	}
@@ -647,13 +659,32 @@ function bpt_add_events_wpec_products_pages( $product  ) {
 		echo '<p><small>NOTE: You must create the event before you create the ticket product</small></p>';		
 }
 
+function wpsc_add_purch_cap_product_form($order) {
+//exit('i hate you');
+	if(array_search('bpt_add_events_wpec_products_pages', $order) === false) {
+		$order[] = 'bpt_add_events_wpec_products_pages';
+	}	
+return $order;
+}
 
-
-	function wpsc_new_meta_boxes() {
+function wpsc_new_meta_boxes() {
 
 		add_meta_box( 'bpt_add_events_wpec_products_pages', 'Buddy Press Tickets', 'bpt_add_events_wpec_products_pages', 'wpsc-product', 'normal', 'high' , 1);
 	}
 add_action( 'add_meta_boxes', 'wpsc_new_meta_boxes');
+	
+if( (float)WPSC_VERSION < 3.8 ){
+	add_filter('wpsc_products_page_forms', 'wpsc_add_purch_cap_product_form');
+	add_action( 'wpsc_edit_product', 'bpt_save_product_deets', 10, 1 );	
+}
+
+//hacked together for 3.7 compatability
+function bpt_save_product_deets(){
+update_post_meta( $_POST['product_id'], '_bpt_event_prod_id', $_POST['event_ticket'] );
+}
+
+
+
 
 function bpt_admin_submit_product( $post_ID, $post ) {
 	global $current_screen, $wpdb;

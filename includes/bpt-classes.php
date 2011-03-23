@@ -18,6 +18,29 @@ function bpt_is_ticket_code_valid( $code ) {
 	return apply_filters( 'bpt_is_ticket_code_valid', $purchase_id );
 }
 
+
+function bpt_is_wpec_3_8(){
+	if((float)WPSC_VERSION >= 3.8)
+		return true;
+	else
+		return false;
+}
+
+
+function bpt_get_ticket_total($product_id){
+	global $wpdb;
+	
+	if(bpt_is_wpec_3_8())
+		$ticket_total = get_post_meta($product_id, '_wpsc_stock', true);
+	else
+	{
+		$sql=  
+		$ticket_total = $wpdb->get_var( 'SELECT `quantity` FROM `'.$wpdb->prefix . 'wpsc_product_list` WHERE `id` = '.$product_id) ;
+		//exit('<pre> ticket total issss'.print_r($ticket_total,1).'</pre>');
+	}
+	return $ticket_total;
+
+}
 //gets the users tikipress feilds
 function bpt_get_users_profile_data($user_id){
 	global $wpdb, $bp;

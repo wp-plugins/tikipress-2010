@@ -27,7 +27,7 @@ add_filter( 'bpt_get_product_name', 'wptexturize' );
 add_filter( 'bpt_get_product_name', 'convert_chars' );
 add_filter( 'bpt_get_product_name', 'stripslashes_deep' );
 
-//add_filter('wpsc_products_page_forms', 'bpt_add_events_wpec_products_page');
+//add_filter('wpsc_products_page_forms', 'bpt_add_events_wpec_products_pages');
 
 
 ?>
