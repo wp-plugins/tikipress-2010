@@ -1,4 +1,43 @@
 <?php
+//include all the little admin functions that have nothing to do with setting up meta box / menus etc
+include_once( dirname( __FILE__ ) . '/bpt-functions.php' );
+
+/**
+ * Register settings group with WordPress settings API.
+ *
+ */
+function bpt_admin_register_settings() {
+	register_setting( 'bpt-settings-group', 'bpt', 'bpt_admin_validate' );
+}
+
+/**
+ * Validation function for register_setting.
+ *
+ * @param array $new_settings An array with changed settings
+ */
+function bpt_admin_validate( $new_settings ) {
+
+	//if this is export to PDF page or badges pdf, then just output PDF, no need to return anything.
+	if ( $_POST['bpt_pdf'] )
+		bpt_pdf($new_settings);
+		
+	if($_POST['bpt_badges_pdf'])
+		bpt_badges_pdf($new_settings,$_FILES);
+		
+	if($_POST['submit_email'])
+		bpt_send_email($_POST);
+
+	if ( is_string( $new_settings ) )
+		return get_blog_option( BP_ROOT_BLOG, 'bpt' );
+
+	if ( isset( $new_settings['ticket_category'] ) )
+		$new_settings['ticket_category'] = (int) $new_settings['ticket_category'];
+		$settings = wp_parse_args( $new_settings, get_blog_option( BP_ROOT_BLOG, 'bpt' ) );	
+	if( WP_MULTISITE )
+		update_option('ticket_category', $new_settings['ticket_category']);
+	return $settings;
+}
+
 /**
  * Setup meta boxes, used in backend
  *
@@ -20,35 +59,6 @@ function bpt_admin_pages_on_load() {
 }
 
 
-// Dashboard Widget for ticket sales
-function bpt_ticket_sales_dashboard_widget() {
-
-$url ='/wp-admin/';
-$admin_url= get_admin_url();
-
-$product_id = bpt_select_event_dropdown($url);
-$users = bpt_get_registered_users( $product_id, true );
-
-$tickets_sold = bpt_get_quantities_sold($product_id);
-$ticket_total = bpt_get_ticket_total($product_id);
-$remaining_tickets = ($ticket_total - $tickets_sold);
-$class = "";
-
-
-$html = '<div id="bpt_dashboard_info">';
-$html.= '<br /><br /><span class="btp_dashboard_stat"><strong> Total Tickets: </strong>' . $ticket_total . '</span>';
-$html.= '<span class="btp_dashboard_stat"><strong>Attendees so far: </strong>' . $tickets_sold . '</span>';
-$html.= '<span class="btp_dashboard_stat"><strong>Tickets Remaining: </strong>' . $remaining_tickets . '</span><br /><br />';
-$html.= '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing&tab=attendees">See a List of Event Attendee\'s</a></span>';
-$html.= '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing">See All Event Statistics</a></span>';
-$html.= '</div>';
-
-$html.= bpt_display_graph($tickets_sold,$ticket_total,$class);
-
-echo $html;
-		
-} 
-
 /**
  * bpt_add_dashboard_widgets
  *
@@ -61,22 +71,33 @@ function bpt_add_dashboard_widgets() {
 } 
 add_action('wp_dashboard_setup', 'bpt_add_dashboard_widgets' );
 
+// Dashboard Widget for ticket sales
+function bpt_ticket_sales_dashboard_widget() {
 
-/**
- * bpt_display_graph
- *
- * @param int tickets sold, ticket total (for the selected event) $class string class name for graph
- * @return html statisitcs graph
- */
+	$url ='/wp-admin/';
+	$admin_url= get_admin_url();
+	
+	$product_id = bpt_select_event_dropdown($url);
+	$users = bpt_get_registered_users( $product_id, true );
+	
+	$tickets_sold = bpt_get_quantities_sold($product_id);
+	$ticket_total = bpt_get_ticket_total($product_id);
+	$remaining_tickets = ($ticket_total - $tickets_sold);
+	$class = "";
+	
+	$html = '<div id="bpt_dashboard_info">';
+	$html.= '<br /><br /><span class="btp_dashboard_stat"><strong> Total Tickets: </strong>' . $ticket_total . '</span>';
+	$html.= '<span class="btp_dashboard_stat"><strong>Attendees so far: </strong>' . $tickets_sold . '</span>';
+	$html.= '<span class="btp_dashboard_stat"><strong>Tickets Remaining: </strong>' . $remaining_tickets . '</span><br /><br />';
+	$html.= '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing&tab=attendees">See a List of Event Attendee\'s</a></span>';
+	$html.= '<span class="btp_dashboard_stat"><a href="'.$admin_url.'/admin.php?page=wpsc-buddypressticketing">See All Event Statistics</a></span>';
+	$html.= '</div>';
+	
+	$html.= bpt_display_graph($tickets_sold,$ticket_total,$class);
+	
+	echo $html;	
+} 
 
-function bpt_display_graph($tickets_sold,$ticket_total,$class){
-
-$html.='<div id="attendeeGraph" class="'.$class.'">';
-$html.='<img src="http://chart.apis.google.com/chart?chs=300x150&cht=p3&chd=t:'.number_format($tickets_sold/1000,3).','.number_format(($ticket_total-$tickets_sold)/1000,3).'&chdl=Sold|Left&chp=0.628&chl=' . $tickets_sold . '|' . ($ticket_total - $tickets_sold) . '&chtt=Attendance">';
-$html.='</div>';
-$html.='<div class="clear"></div>';
-return $html;
-}
 
 
 /**
@@ -85,59 +106,20 @@ Remove the menu for event press registrations, we want to use our registration p
 *
 */
 function bpt_remove_menu() {
-	global $menu;
-	
-		if (class_exists('ep_admin_menus')) {
-		unset($menu[31]);
+global $menu;
+
+	foreach($menu as $menu_item){
+		if($menu_item[2] == "edit.php?post_type=ep_reg"){
+			$menu_arr_key = array_keys($menu,$menu_item);
+			unset($menu[$menu_arr_key[0]]);
+			break;
 		}
 	}
+}
 add_action('admin_head', 'bpt_remove_menu');
 
-/**
- * Register settings group with WordPress settings API.
- *
- */
+
  
-function bpt_admin_register_settings() {
-	register_setting( 'bpt-settings-group', 'bpt', 'bpt_admin_validate' );
-}
- 
-/**
- * Validation function for register_setting.
- *
- * @param array $new_settings An array with changed settings
- */
-function bpt_admin_validate( $new_settings ) {
-
-//exit('<pre>'.print_r($_FILES,1).'</pre>'.'<pre>'.print_r($new_settings,1).'</pre>');
-
-	//if this is export to PDF page or badges pdf, then just output PDF, no need to return anything.
-	if ( $_POST['bpt_pdf'] )
-		bpt_pdf($new_settings);
-		
-	if($_POST['bpt_badges_pdf'])
-		bpt_badges_pdf($new_settings,$_FILES);
-		
-	if($_POST['submit_email'])
-		bpt_send_email($_POST);
-
-	if ( is_string( $new_settings ) )
-		return get_blog_option( BP_ROOT_BLOG, 'bpt' );
-
-	if ( isset( $new_settings['ticket_category'] ) )
-			$new_settings['ticket_category'] = (int) $new_settings['ticket_category'];
-		//return	$new_settings;		
-	$settings = wp_parse_args( $new_settings, get_blog_option( BP_ROOT_BLOG, 'bpt' ) );	
-//exit (print_r($settings,1));
-	//IF MS
-	if( WP_MULTISITE )
-		update_option('ticket_category', $new_settings['ticket_category']);
-	else	
-	//SAVE THROUGH UPDATE_OPTION
-	//ELSE
-		return $settings;
-}
-
 
 /**
  * Add "Settings" link on plugins menu 
@@ -156,7 +138,7 @@ add_filter( 'plugin_action_links', 'bpt_admin_add_action_link', 10, 3 );
 
 
 /**
- * Admin page for BuddyPress ticketing.
+ * Admin page for BuddyPress ticketing and all sub menus.
  *
  */
 function bpt_admin() {
@@ -184,123 +166,78 @@ function bpt_admin() {
 
 ?>
 	<div id="bp-admin">
-	<div id="bpt-admin-metaboxes-general" class="wrap">
-
-		<div id="bp-admin-header">
-			<h3><?php _e( 'BuddyPress', 'bpt' ) ?></h3>
-			<h4><?php _e( 'TikiPress', 'bpt' ) ?></h4> &nbsp;
-			<?php $TikiLogo_url = plugins_url('images/tikipress-logo.png', __FILE__);
-			echo "<img src='" . $TikiLogo_url."' width= '100px' height='50px' alt='TikiPress'/>" ; ?>
-		</div>
-
-		<div id="bp-admin-nav">
-			<ol>
-				<li <?php if ( $is_statistics_tab ) echo 'class="current"' ?>>
-					<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing', 'admin' ) ?>"><?php _e( 'Statistics', 'bpt' ) ?></a>
-				</li>
-				<li <?php if ( $is_settings_tab ) echo 'class="current"' ?>>
-					<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_SETTINGS_SLUG, 'admin' )  ?>"><?php _e( 'Configure', 'bpt' ) ?></a>
-				</li>
-				<li <?php if ( $is_attendee_tab ) echo 'class="current"' ?>>
-					<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_ATTENDEES_SLUG, 'admin' )  ?>"><?php _e( 'Attendees', 'bpt' ) ?></a>
-				</li>
-				<li <?php if ( $is_pdf_tab ) echo 'class="current"' ?>>
-					<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_PDF_SLUG, 'admin' )  ?>"><?php _e( 'Create Attendee PDF', 'bpt' ) ?></a>
-				</li>
-				<li <?php if ( $is_pdf_badges_tab ) echo 'class="current"' ?>>
-					<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_PDF_BADGES_SLUG, 'admin' )  ?>"><?php _e( 'Create PDF Badges', 'bpt' ) ?></a>
-				</li>
-				<li <?php if ( $is_help_tab ) echo 'class="current"' ?>>
-					<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_HELP_SLUG, 'admin' )  ?>"><?php _e( 'Getting started with TikiPress', 'bpt' ) ?></a>
-				</li>
-
-			</ol>
-		</div>
-
-		<?php if ( isset( $_GET['updated'] ) ) : ?>
-			<div id="message" class="updated">
-				<p><?php _e( 'Your WP e-Commerce Ticketing settings have been saved.', 'bpt' ) ?></p>
+		<div id="bpt-admin-metaboxes-general" class="wrap">
+		
+			<div id="bp-admin-header">
+				<h3><?php _e( 'BuddyPress', 'bpt' ) ?></h3>
+				<h4><?php _e( 'TikiPress', 'bpt' ) ?></h4> &nbsp;
+				<?php $TikiLogo_url = plugins_url('images/tikipress-logo.png', __FILE__);
+				echo "<img src='" . $TikiLogo_url."' width= '100px' height='50px' alt='TikiPress'/>" ; ?>
 			</div>
-		<?php endif; ?>
-
-		<form enctype="multipart/form-data" method="post" action="options.php" id="wpsc-buddypressticketing">
-			<?php wp_nonce_field( 'closedpostboxes', 'closedpostboxesnonce', false ) ?>
-			<?php wp_nonce_field( 'meta-box-order', 'meta-box-order-nonce', false ) ?>
-			<?php settings_fields( 'bpt-settings-group' ) ?>
-
-			<div id="poststuff" class="metabox-holder">
-				<div id="post-body" class="has-sidebar">
-					<div id="post-body-content" class="has-sidebar-content">
-						<?php
-						if ( $is_settings_tab )
-							do_meta_boxes( 'store_page_wpsc-buddypressticketing-settings', 'advanced', $settings );
-						if ($is_attendee_tab)
-							do_meta_boxes( 'store_page_wpsc-buddypressticketing-attendess', 'advanced', $settings );
-						if ($is_pdf_tab)
-							do_meta_boxes( 'store_page_wpsc-buddypressticketing-pdf', 'advanced', $settings );
-						if ( $is_statistics_tab )
-							do_meta_boxes( 'store_page_wpsc-buddypressticketing', 'advanced', $settings );
-						if ( $is_pdf_badges_tab )
-							do_meta_boxes( 'store_page_wpsc-buddypressticketing-badges', 'advanced', $settings );
-						if ( $is_help_tab )
-							do_meta_boxes( 'store_page_wpsc-buddypressticketing-help', 'advanced', $settings );
-						?>
-					</div>
-
-					<?php if ( $is_settings_tab ) : ?>
-						<p><input type="submit" class="button-primary" value="<?php _e( 'Save WP e-Commerce Ticketing settings', 'bpt' ) ?>" /></p>
-					<?php endif ?>
+		
+			<div id="bp-admin-nav">
+				<ol>
+					<li <?php if ( $is_statistics_tab ) echo 'class="current"' ?>>
+						<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing', 'admin' ) ?>"><?php _e( 'Statistics', 'bpt' ) ?></a>
+					</li>
+					<li <?php if ( $is_settings_tab ) echo 'class="current"' ?>>
+						<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_SETTINGS_SLUG, 'admin' )  ?>"><?php _e( 'Configure', 'bpt' ) ?></a>
+					</li>
+					<li <?php if ( $is_attendee_tab ) echo 'class="current"' ?>>
+						<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_ATTENDEES_SLUG, 'admin' )  ?>"><?php _e( 'Attendees', 'bpt' ) ?></a>
+					</li>
+					<li <?php if ( $is_pdf_tab ) echo 'class="current"' ?>>
+						<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_PDF_SLUG, 'admin' )  ?>"><?php _e( 'Create Attendee PDF', 'bpt' ) ?></a>
+					</li>
+					<li <?php if ( $is_pdf_badges_tab ) echo 'class="current"' ?>>
+						<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_PDF_BADGES_SLUG, 'admin' )  ?>"><?php _e( 'Create PDF Badges', 'bpt' ) ?></a>
+					</li>
+					<li <?php if ( $is_help_tab ) echo 'class="current"' ?>>
+						<a href="<?php echo site_url( 'wp-admin/admin.php?page=wpsc-buddypressticketing&amp;tab=' . BPT_ADMIN_HELP_SLUG, 'admin' )  ?>"><?php _e( 'Getting started with TikiPress', 'bpt' ) ?></a>
+					</li>
+		
+				</ol>
+			</div>
+		
+			<?php if ( isset( $_GET['updated'] ) ) : ?>
+				<div id="message" class="updated">
+					<p><?php _e( 'Your TikiPress settings have been updated.', 'bpt' ) ?></p>
 				</div>
-			</div>
-		</form>
-
-	</div><!-- #bpt-admin-metaboxes-general -->
+			<?php endif; ?>
+		
+			<form enctype="multipart/form-data" method="post" action="options.php" id="wpsc-buddypressticketing">
+				<?php wp_nonce_field( 'closedpostboxes', 'closedpostboxesnonce', false ) ?>
+				<?php wp_nonce_field( 'meta-box-order', 'meta-box-order-nonce', false ) ?>
+				<?php settings_fields( 'bpt-settings-group' ) ?>
+		
+				<div id="poststuff" class="metabox-holder">
+					<div id="post-body" class="has-sidebar">
+						<div id="post-body-content" class="has-sidebar-content">
+							<?php
+							if ( $is_settings_tab )
+								do_meta_boxes( 'store_page_wpsc-buddypressticketing-settings', 'advanced', $settings );
+							if ($is_attendee_tab)
+								do_meta_boxes( 'store_page_wpsc-buddypressticketing-attendess', 'advanced', $settings );
+							if ($is_pdf_tab)
+								do_meta_boxes( 'store_page_wpsc-buddypressticketing-pdf', 'advanced', $settings );
+							if ( $is_statistics_tab )
+								do_meta_boxes( 'store_page_wpsc-buddypressticketing', 'advanced', $settings );
+							if ( $is_pdf_badges_tab )
+								do_meta_boxes( 'store_page_wpsc-buddypressticketing-badges', 'advanced', $settings );
+							if ( $is_help_tab )
+								do_meta_boxes( 'store_page_wpsc-buddypressticketing-help', 'advanced', $settings );
+							?>
+						</div><!-- #bpt-settings-group -->
+					</div><!-- #post-body -->
+				</div><!-- #poststuff -->
+			</form>
+		
+		</div><!-- #bpt-admin-metaboxes-general -->
 	</div><!-- #bp-admin -->
 <?php
 }
 
 
-/**
- * Metabox for category settings
- * @param array $settings Array containing bpt settings
- */
-function bpt_admin_screen_ticketcategory( $settings ) {
-
-	if( WP_MULTISITE )
-		$settings = get_option('ticket_category');
-	else
-		$settings = maybe_unserialize($settings);
-		
-	$categories = bpt_wpsc_get_categories();
-	
-	
-
-?>	<h2>Ticket Category</h2>
-	<p><label for="ticket_category"><?php _e( "Select the category to use for ticketing:", 'bpt' ) ?></label></p>
-
-	<select name="bpt[ticket_category]">
-	<?php
-
-	foreach ( (array) $categories as $cat ) {
-
-		$selected = '';
-		if ( $settings['ticket_category'] == $cat['id'] || $settings['ticket_category'] == $cat['term_id'] )
-			$selected = "selected='selected'";
-		if((float)WPSC_VERSION >= 3.8 )
-			echo "<option value='" . $cat['term_id'] . "'" . $selected . ' >' . $cat['name'] . "</option>";
-		else
-			echo "<option value='" . $cat['id'] . "'" . $selected . ' >' . $cat['name'] . "</option>";
-	}
-	?>
-	</select>
-	
-	<h2>Tiki Profile Feilds</h2>
-	<p>The Tiki profile fields enable you to gather statistics and attendee data for your event. W have created some default fields for you but feel free to create your own.
-	<a href= "<?php echo get_admin_url();?>admin.php?page=bp-profile-setup">Set up your TikiPress feilds</a><br />
-	Values of Radio buttons and Drop-down lists will be shown in statistics, other information will be show per user.</p>
-<?php
-
-}
 
 /**
  * Metabox for statistics
@@ -308,12 +245,24 @@ function bpt_admin_screen_ticketcategory( $settings ) {
  */	
 function bpt_admin_screen_statistics( $settings ) {
 	global $wpdb, $bp;
-	
 	echo'<div class="float_left">';
+	
 	$url ='/wp-admin/admin.php?page=wpsc-buddypressticketing&event=';
 	$product_id = bpt_select_event_dropdown($url);
 	$users = bpt_get_registered_users( $product_id, true );
+	
+	$tickets_sold = bpt_get_quantities_sold($product_id);
+	$ticket_total = bpt_get_ticket_total($product_id);
+	$remaining_tickets = ($ticket_total - $tickets_sold);
+	//$class = "";
+	
+	
+	
+	
+	//$product_id = bpt_select_event_dropdown($url);
+	//$users = bpt_get_registered_users( $product_id, true );
 
+/*
 	if((float)WPSC_VERSION >= 3.8 ){
 		$ticket_total = get_post_meta($product_id, '_wpsc_stock', true); 
 		$ticket_price = get_post_meta($product_id, '_wpsc_price', true); 
@@ -328,6 +277,7 @@ function bpt_admin_screen_statistics( $settings ) {
 	$tickets_sold = bpt_get_quantities_sold($product_id);
 	$remaining_tickets = ($ticket_total - $tickets_sold);
 	$total_revenue = ($tickets_sold * $ticket_price );
+*/
 
 	//echo $product_id;
 	echo '<h2>Ticket stock control</h2>';
@@ -386,8 +336,51 @@ function bpt_admin_screen_statistics( $settings ) {
 $class="float_left";
 $html= bpt_display_graph($tickets_sold,$ticket_total,$class);
 echo $html;
+
 }
 
+/**
+ * Metabox for category settings
+ * @param array $settings Array containing bpt settings
+ */
+function bpt_admin_screen_ticketcategory( $settings ) {
+
+	if( WP_MULTISITE )
+		$settings = get_option('ticket_category');
+	else
+		$settings = maybe_unserialize($settings);
+		
+	$categories = bpt_wpsc_get_categories();
+	
+	
+
+?>	<h2>Ticket Category</h2>
+	<p><label for="ticket_category"><?php _e( "Select the category to use for ticketing:", 'bpt' ) ?></label></p>
+
+	<select name="bpt[ticket_category]">
+	<?php
+
+	foreach ( (array) $categories as $cat ) {
+
+		$selected = '';
+		if ( $settings['ticket_category'] == $cat['id'] || $settings['ticket_category'] == $cat['term_id'] )
+			$selected = "selected='selected'";
+		if((float)WPSC_VERSION >= 3.8 )
+			echo "<option value='" . $cat['term_id'] . "'" . $selected . ' >' . $cat['name'] . "</option>";
+		else
+			echo "<option value='" . $cat['id'] . "'" . $selected . ' >' . $cat['name'] . "</option>";
+	}
+	?>
+	</select>
+	
+	<h2>Tiki Profile Feilds</h2>
+	<p>The Tiki profile fields enable you to gather statistics and attendee data for your event. W have created some default fields for you but feel free to create your own.
+	<a href= "<?php echo get_admin_url();?>admin.php?page=bp-profile-setup">Set up your TikiPress feilds</a><br />
+	Values of Radio buttons and Drop-down lists will be shown in statistics, other information will be show per user.</p>
+
+							<p><input type="submit" class="button-primary" value="<?php _e( 'Save WP e-Commerce Ticketing settings', 'bpt' ) ?>" /
+<?php
+}
 
 /**
  * Metabox for attendees list
@@ -493,34 +486,165 @@ echo '</div>';
 	echo '<div class="clear_float"></div>';
 
 }
-/* Send a group email from the attendees page */
-function bpt_send_email($_POST){
 
-	if (wp_verify_nonce($_POST['attendeeNotificationNonce'], plugin_basename(__FILE__)))
-		{
-		$event_id = $_POST['events_dropdown'];
-		$product_id = bpt_wpsc_get_product_id_from_event( $event_id);
-		$users = bpt_get_registered_users( $product_id );
+/**
+ * Export PDF metabox
+ * @param array $new_settings An array with changed settings
+ */
+function bpt_admin_screen_pdf( $settings, $product_id) {
+	global $wpdb;
+	$url='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=pdf&event=';
+	$product_id = bpt_select_event_dropdown($url);
+	$fields = bpt_get_ticket_fields();  
 
-			$i=0;
-			foreach ($users as $user){
-				$bccEmail[$i] = $user->user_email;
-			$i++; }
-				
-				for($i=0; $i<=count($users); $i++)
-					$headers = 'Bcc: ' . $bccEmail[$i]."\r\n";
-					$headers .= 'To: '. $_POST['sender'] . "\r\n";
-
-			//WP -always- quotes so we have to -always- stripslashes
-			$body = stripslashes($_POST["email_attendees_body"]);
-			$subject = stripslashes($_POST["email_attendees_subject"]);
-
-			wp_mail($bccEmail, $subject , $body , $headers);
-
-		}
+	foreach ( (array) $fields as $field ) {
+		$checked='';
+		if ( @in_array( $field->id, $settings['fields'] ) )
+			$checked='checked="checked"';
+		?>
+		<br /><input type="checkbox" name="bpt[fields][]" value="<?php echo $field->id; ?>" <?php echo $checked; ?>/> <?php echo $field->name;
+	
+	} ?>
+	
+	<input type="hidden" name="bpt_pdf" value="true" />
+	<p><input type="submit" class="button-primary" value="<?php _e( 'Export as PDF', 'bpt' ); ?>" /></p>
+<?php
 }
 
 
+/**
+ * Badges PDF metabox
+ * @param array $new_settings An array with changed settings
+ */
+function bpt_admin_screen_badges( $settings, $product_id ) {
+	global $wpdb, $bp;
+	$url='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=badges&event='; 
+	$user_details = wp_get_current_user();
+	$user_email=$user_details->data->user_email;
+	
+    ?>
+
+    <div class="float_left" id="badges_options">
+    <p><?php _e('To use the badge generator first select the event you would like to create the ticket for, then select which information you would like to use on your badge. You should see a live preview - once your happy with it export it to a pdf', 'bpt');?></p>
+	<p><?php $product_id = bpt_select_event_dropdown($url); ?></p>
+		<br />
+				<label for='bpt_badges_pdf'>Upload your logo:</label>
+					<input type="file" name="logo_upload" /> 	
+			<table>
+				<tr id="grav">
+					<td>Show Gravitar</td>
+					<td class="grav_radio"> Yes <input type='radio' name='badges_gravatar' value='1' >  No <input type='radio' checked = 'checked' name='badges_gravatar' value='0' ></td>
+				</tr>
+			
+				<?php
+				/* 	these fields are collected from gravatar or the user account and not the buddypress profile feilds like the event data */
+				$extra_fields = array(
+				array(name => "Twitter Id", id => 'badges_twitter',),
+				array(name => "Site Link", id => 'badges_site',),
+				array(name => "Email Address", id => 'badges_email',)
+				);
+				
+			
+				$fields= bpt_get_ticket_fields();
+				$all_feilds = array_merge($extra_fields, $fields);
+			
+					for($j=0; $j < count($all_feilds); $j++){
+					$select_id = 'Select'.($j+1) ;
+					$select_name = "bpt[fields][".$value."]"; 
+					echo '<tr class="bpt_template_select_row">';
+					if($j < 3){
+						echo '<td class="bpt_template_select">'.$all_feilds[$j]['name'] . '</td>';
+						$value = $all_feilds[$j]['id'];
+					}else{
+						echo '<td class="bpt_template_select">'.$all_feilds[$j]->name . '</td>';
+						$value = $all_feilds[$j]->id;
+					}
+					$select_name = "bpt[fields][".$value."]"; 
+				
+					 ?>	<td class="bpt_template_select"> <select id="<?php echo $select_id ?>" name="<?php echo $select_name ?>" onchange="javascript:SelectBoxes(this);">
+	
+					<?php echo "<option value='exclude' selected='selected'>Exclude</option>";
+	  					//for each template posistion create that option will need to be not hard coded when more templates are added
+	  				for($i=1; $i < 8; $i++){
+						echo '<option value="' . $i . '"> Template Area ' . $i . '</option>';
+	  				}
+
+
+	 				 }
+					echo "</select> </td></tr>"; ?>
+
+						
+				
+		</table>
+		<input type="hidden" name="bpt_badges_pdf" value="true" />
+					<input type="submit" class="button-primary" value="<?php _e( 'Export badges as PDF', 'bpt' ); ?>" />
+		
+</div>
+<?php $user_data = get_user_preview_data($all_feilds); ?>
+
+
+
+<div class="float_left_img2">
+<p><strong>Your Super Cool Badge Builder</strong></p>
+<p>Below is a preview of your badge and current settings - change the template options to change the look of your badge! Don't forget to export when your happy with it!</p>
+<!-- these are the divs that get shown and hidden they can probably be moved into another template file (with their own css sheet) as more templates will be added -->
+<div class="template_area">
+<?php $template_url = plugins_url('templates/bpt/badges/wordcamp-ticket-badge.jpg', __FILE__);
+echo "<img id='background_badge' src='" . $template_url."' alt='badges_template' />" ; ?>
+
+<div class="show_avatar">
+	 <div id="show_avatar" class="" style="display: block">
+        <?php echo get_avatar( $user_email , '50' ); ?>
+     </div>
+</div>
+<div class="area1_container">
+    <div id="1" class="area1" style="display: none">
+       <strong></strong>
+    </div>
+</div>
+
+
+<div class="area2_container">
+    <div id="2" class="area2" style="display: none"></div>	
+</div>
+<div class="area_container">
+   	 <div id="6" class="area6" style="display: none"></div>
+</div>
+<div class="area3_container">
+    <div id="3" class="area3" style="display: none">
+        <strong></strong>
+    </div>
+</div>
+<div class="area_container">
+    <div id="4" class="area4" style="display: none">
+        
+     </div>
+</div>
+<div class="area_container">
+     <div id="5" class="area5" style="display: none">
+       <strong></strong> 
+     </div>
+</div>
+<div class="area7_container">
+	 <div id="7" class="area7" style="display: none">
+       
+     </div>
+</div>
+
+</div>
+</div>
+
+
+<div class="float_left_img">
+	<p><strong>Area Guide</strong></p>
+	<p>Use the area guide to see the location of the different template positions</p>
+	<?php $template_url = plugins_url('templates/bpt/badges/badges_template.jpg', __FILE__);
+	echo "<img width='200px' src='" . $template_url."' alt='badges_template' />" ; ?>
+</div>
+
+<div class='clear'></div>
+
+<?php }
 /* TikiPress Help menu - pehapes add some images */
 function bpt_admin_screen_help_page(){	
 ?>
@@ -711,168 +835,7 @@ function bpt_get_ticket_fields() {
 	return $fields;
 }
 
-/**
- * Export PDF metabox
- * @param array $new_settings An array with changed settings
- */
-function bpt_admin_screen_pdf( $settings, $product_id) {
-	global $wpdb;
-	$url='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=pdf&event=';
-	$product_id = bpt_select_event_dropdown($url); ?>
-	<form name="bpt_pdf" method="post" enctype="multipart/form-data"  action="">
-	
-	
-		<?php $fields = bpt_get_ticket_fields();  
-		
-		foreach ( (array) $fields as $field ) {
-			$checked='';
-			if ( @in_array( $field->id, $settings['fields'] ) )
-				$checked='checked="checked"';
-		?>
-		<br /><input type="checkbox" name="bpt[fields][]" value="<?php echo $field->id; ?>" <?php echo $checked; ?>/> <?php echo $field->name;
-		
-		} ?>
-	
-		<input type="hidden" name="bpt_pdf" value="true" />
-		<p><input type="submit" class="button-primary" value="<?php _e( 'Export as PDF', 'bpt' ); ?>" /></p>
-	 </form>
-<?php
-}
 
-
-/**
- * Badges PDF metabox
- * @param array $new_settings An array with changed settings
- */
-function bpt_admin_screen_badges( $settings, $product_id ) {
-	global $wpdb, $bp;
-	$url='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=badges&event='; 
-	$user_details = wp_get_current_user();
-	$user_email=$user_details->data->user_email;
-	
-    ?>
-
-    <div class="float_left" id="badges_options">
-    <p><?php _e('To use the badge generator first select the event you would like to create the ticket for, then select which information you would like to use on your badge. You should see a live preview - once your happy with it export it to a pdf', 'bpt');?></p>
-	<p><?php $product_id = bpt_select_event_dropdown($url); ?></p>
-		<br />
-				<label for='bpt_badges_pdf'>Upload your logo:</label>
-					<input type="file" name="logo_upload" /> 	
-			<table>
-				<tr id="grav">
-					<td>Show Gravitar</td>
-					<td class="grav_radio"> Yes <input type='radio' name='badges_gravatar' value='1' >  No <input type='radio' checked = 'checked' name='badges_gravatar' value='0' ></td>
-				</tr>
-			
-				<?php
-				/* 	these fields are collected from gravatar or the user account and not the buddypress profile feilds like the event data */
-				$extra_fields = array(
-				array(name => "Twitter Id", id => 'badges_twitter',),
-				array(name => "Site Link", id => 'badges_site',),
-				array(name => "Email Address", id => 'badges_email',)
-				);
-				
-			
-				$fields= bpt_get_ticket_fields();
-				$all_feilds = array_merge($extra_fields, $fields);
-			
-					for($j=0; $j < count($all_feilds); $j++){
-					$select_id = 'Select'.($j+1) ;
-					$select_name = "bpt[fields][".$value."]"; 
-					echo '<tr class="bpt_template_select_row">';
-					if($j < 3){
-						echo '<td class="bpt_template_select">'.$all_feilds[$j]['name'] . '</td>';
-						$value = $all_feilds[$j]['id'];
-					}else{
-						echo '<td class="bpt_template_select">'.$all_feilds[$j]->name . '</td>';
-						$value = $all_feilds[$j]->id;
-					}
-					$select_name = "bpt[fields][".$value."]"; 
-				
-					 ?>	<td class="bpt_template_select"> <select id="<?php echo $select_id ?>" name="<?php echo $select_name ?>" onchange="javascript:SelectBoxes(this);">
-	
-					<?php echo "<option value='exclude' selected='selected'>Exclude</option>";
-	  					//for each template posistion create that option will need to be not hard coded when more templates are added
-	  				for($i=1; $i < 8; $i++){
-						echo '<option value="' . $i . '"> Template Area ' . $i . '</option>';
-	  				}
-
-
-	 				 }
-					echo "</select> </td></tr>"; ?>
-
-						
-				
-		</table>
-		<input type="hidden" name="bpt_badges_pdf" value="true" />
-					<input type="submit" class="button-primary" value="<?php _e( 'Export badges as PDF', 'bpt' ); ?>" />
-		
-</div>
-<?php $user_data = get_user_preview_data($all_feilds); ?>
-
-
-
-<div class="float_left_img2">
-<p><strong>Your Super Cool Badge Builder</strong></p>
-<p>Below is a preview of your badge and current settings - change the template options to change the look of your badge! Don't forget to export when your happy with it!</p>
-<!-- these are the divs that get shown and hidden they can probably be moved into another template file (with their own css sheet) as more templates will be added -->
-<div class="template_area">
-<?php $template_url = plugins_url('templates/bpt/badges/wordcamp-ticket-badge.jpg', __FILE__);
-echo "<img id='background_badge' src='" . $template_url."' alt='badges_template' />" ; ?>
-
-<div class="show_avatar">
-	 <div id="show_avatar" class="" style="display: block">
-        <?php echo get_avatar( $user_email , '50' ); ?>
-     </div>
-</div>
-<div class="area1_container">
-    <div id="1" class="area1" style="display: none">
-       <strong></strong>
-    </div>
-</div>
-
-
-<div class="area2_container">
-    <div id="2" class="area2" style="display: none"></div>	
-</div>
-<div class="area_container">
-   	 <div id="6" class="area6" style="display: none"></div>
-</div>
-<div class="area3_container">
-    <div id="3" class="area3" style="display: none">
-        <strong></strong>
-    </div>
-</div>
-<div class="area_container">
-    <div id="4" class="area4" style="display: none">
-        
-     </div>
-</div>
-<div class="area_container">
-     <div id="5" class="area5" style="display: none">
-       <strong></strong> 
-     </div>
-</div>
-<div class="area7_container">
-	 <div id="7" class="area7" style="display: none">
-       
-     </div>
-</div>
-
-</div>
-</div>
-
-
-<div class="float_left_img">
-	<p><strong>Area Guide</strong></p>
-	<p>Use the area guide to see the location of the different template positions</p>
-	<?php $template_url = plugins_url('templates/bpt/badges/badges_template.jpg', __FILE__);
-	echo "<img width='200px' src='" . $template_url."' alt='badges_template' />" ; ?>
-</div>
-
-<div class='clear'></div>
-
-<?php }
 
 /* gets out the current users info and creates a js array used to generate the text into the badge preview */
 function get_user_preview_data($all_feilds){
