@@ -110,8 +110,8 @@ global $menu;
 
 	foreach($menu as $menu_item){
 		if($menu_item[2] == "edit.php?post_type=ep_reg"){
-			$menu_arr_key = array_keys($menu,$menu_item);
-			unset($menu[$menu_arr_key[0]]);
+			$registration_menu_arr_key = array_keys($menu,$menu_item);
+			unset($menu[$registration_menu_arr_key[0]]);
 			break;
 		}
 	}
@@ -245,7 +245,7 @@ function bpt_admin() {
  */	
 function bpt_admin_screen_statistics( $settings ) {
 	global $wpdb, $bp;
-	echo'<div class="float_left">';
+	$html= '<div class="float_left">';
 	
 	$url ='/wp-admin/admin.php?page=wpsc-buddypressticketing&event=';
 	$product_id = bpt_select_event_dropdown($url);
@@ -254,47 +254,22 @@ function bpt_admin_screen_statistics( $settings ) {
 	$tickets_sold = bpt_get_quantities_sold($product_id);
 	$ticket_total = bpt_get_ticket_total($product_id);
 	$remaining_tickets = ($ticket_total - $tickets_sold);
-	//$class = "";
-	
-	
-	
-	
-	//$product_id = bpt_select_event_dropdown($url);
-	//$users = bpt_get_registered_users( $product_id, true );
 
-/*
-	if((float)WPSC_VERSION >= 3.8 ){
-		$ticket_total = get_post_meta($product_id, '_wpsc_stock', true); 
-		$ticket_price = get_post_meta($product_id, '_wpsc_price', true); 
-		}
-	else
-	{
-		$sql=  'SELECT `quantity` FROM `'.$wpdb->prefix . 'wpsc_product_list` WHERE `id` = '.$product_id[0];
-		$ticket_total = $wpdb->get_results( $sql ) ;
-		$ticket_total = $ticket_total[0]->quantity;
-	}
-	
-	$tickets_sold = bpt_get_quantities_sold($product_id);
-	$remaining_tickets = ($ticket_total - $tickets_sold);
-	$total_revenue = ($tickets_sold * $ticket_price );
-*/
-
-	//echo $product_id;
-	echo '<h2>Ticket stock control</h2>';
+	$html.= '<h2>Ticket stock control</h2>';
 	
 	if ($ticket_total == 0)
-		echo '<p> You have not entered a ticket limit for this event, to do so please edit your ticket product. </p>';
+		$html.= '<p> You have not entered a ticket limit for this event, to do so please edit your ticket product. </p>';
 	
-	echo '<p> Sold: (' .$tickets_sold .'/' . $ticket_total . ')</p>';
-	echo '<p> Remaining Tickets: ' . $remaining_tickets . '</p>';
-	echo '<p> Total Revenue gathered for this event: $' . $total_revenue . '</p>';
+	$html.= '<p> Sold: (' .$tickets_sold .'/' . $ticket_total . ')</p>';
+	$html.= '<p> Remaining Tickets: ' . $remaining_tickets . '</p>';
+	$html.= '<p> Total Revenue gathered for this event: $' . $total_revenue . '</p>';
 	
 
-	?> 	<h2>Tiki profile feilds </h2>
-	<a href= "<?php echo get_admin_url();?>admin.php?page=bp-profile-setup">Set up your TikiPress feilds</a><br />
+	$html.= '<h2>Tiki profile feilds </h2>';
+	$html.=  '<a href= "<?php echo get_admin_url();?>admin.php?page=bp-profile-setup">Set up your TikiPress feilds</a><br />
 	<p><small>Values of Radio buttons and Drop-down lists will be shown <br />
-	 in statistics, other information will be show per user.</small></p>
-	<?php
+	 in statistics, other information will be show per user.</small></p>';
+	
 	$sql = 'SELECT  `data`.`value` ,  `fields`.`name` , COUNT( * ) as count 
 			FROM  `' . $bp->table_prefix . 'bp_xprofile_data` `data` 
 			JOIN  `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` ON  `data`.`field_id` =  `fields`.`id` 
@@ -306,6 +281,7 @@ function bpt_admin_screen_statistics( $settings ) {
 			)
 			GROUP BY  `data`.`value`';
 	$stats = $wpdb->get_results( $sql ) ;
+	
 	if( $stats ) {
 		$statistic = array();
 		foreach ( (array) $stats as $stat ) {
@@ -315,26 +291,25 @@ function bpt_admin_screen_statistics( $settings ) {
 			);
 		}
 		while( current( $statistic ) ) {
-			echo '<h4>' . key( $statistic ) . '</h4>';
+			$html.=  '<h4>' . key( $statistic ) . '</h4>';
 			foreach( (array) $statistic[key($statistic)] as $stat ){
 				$stat['value'] = maybe_unserialize( $stat['value'] );
 				if ( is_array( $stat['value'] ) ) {
 					echo implode( ', ', $stat['value'] );
 				} else {
-					echo $stat['value'];
+					$html.=  $stat['value'];
 				}
-				echo ' <strong>(' . $stat['count'] . ')</strong><br />';
+				$html.=  ' <strong>(' . $stat['count'] . ')</strong><br />';
 			}
 			next( $statistic );
 		}	
 	} else {
-		echo '<h2>There are no statistics for this event.</h2>';
+		$html.= '<h2>There are no statistics for this event.</h2>';
 	}	
-	echo '</div>';
+	$html.= '</div>';
 	
-/* 	This graph came from wp event ticketing */
 $class="float_left";
-$html= bpt_display_graph($tickets_sold,$ticket_total,$class);
+$html.= bpt_display_graph($tickets_sold,$ticket_total,$class);
 echo $html;
 
 }
@@ -344,41 +319,37 @@ echo $html;
  * @param array $settings Array containing bpt settings
  */
 function bpt_admin_screen_ticketcategory( $settings ) {
-
 	if( WP_MULTISITE )
 		$settings = get_option('ticket_category');
 	else
 		$settings = maybe_unserialize($settings);
 		
-	$categories = bpt_wpsc_get_categories();
-	
-	
+	$categories = bpt_wpsc_get_categories(); ?>	
 
-?>	<h2>Ticket Category</h2>
+	<h2>Ticket Category</h2>
 	<p><label for="ticket_category"><?php _e( "Select the category to use for ticketing:", 'bpt' ) ?></label></p>
-
+	
 	<select name="bpt[ticket_category]">
-	<?php
-
-	foreach ( (array) $categories as $cat ) {
-
-		$selected = '';
-		if ( $settings['ticket_category'] == $cat['id'] || $settings['ticket_category'] == $cat['term_id'] )
-			$selected = "selected='selected'";
-		if((float)WPSC_VERSION >= 3.8 )
-			echo "<option value='" . $cat['term_id'] . "'" . $selected . ' >' . $cat['name'] . "</option>";
-		else
-			echo "<option value='" . $cat['id'] . "'" . $selected . ' >' . $cat['name'] . "</option>";
-	}
-	?>
+		<?php
+		foreach ( (array) $categories as $cat ) {
+	
+			$selected = '';
+			if ( $settings['ticket_category'] == $cat['id'] || $settings['ticket_category'] == $cat['term_id'] )
+				$selected = "selected='selected'";
+			if((float)WPSC_VERSION >= 3.8 )
+				echo "<option value='" . $cat['term_id'] . "'" . $selected . ' >' . $cat['name'] . "</option>";
+			else
+				echo "<option value='" . $cat['id'] . "'" . $selected . ' >' . $cat['name'] . "</option>";
+		}
+		?>
 	</select>
 	
-	<h2>Tiki Profile Feilds</h2>
-	<p>The Tiki profile fields enable you to gather statistics and attendee data for your event. W have created some default fields for you but feel free to create your own.
-	<a href= "<?php echo get_admin_url();?>admin.php?page=bp-profile-setup">Set up your TikiPress feilds</a><br />
+	<h2>Tiki Profile Fields</h2>
+	<p>The Tiki profile fields enable you to gather statistics and attendee data for your event. We have created some default fields for you but feel free to create your own.
+	<a href= "<?php echo get_admin_url();?>admin.php?page=bp-profile-setup">Set up your TikiPress fields</a><br />
 	Values of Radio buttons and Drop-down lists will be shown in statistics, other information will be show per user.</p>
 
-							<p><input type="submit" class="button-primary" value="<?php _e( 'Save WP e-Commerce Ticketing settings', 'bpt' ) ?>" /
+	<p><input type="submit" class="button-primary" value="<?php _e( 'Save WP e-Commerce Ticketing settings', 'bpt' ) ?>" /></p>
 <?php
 }
 
@@ -387,7 +358,7 @@ function bpt_admin_screen_ticketcategory( $settings ) {
  * @param array $settings Array containing bpt settings
  */
 function bpt_admin_screen_attendees( $settings ) {
-		global $wpdb, $bp;
+	global $wpdb, $bp;
 		
 		//this url is used in the function select drop down list
 		$url ='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=attendees&event=';
