@@ -18,7 +18,6 @@ function bpt_is_ticket_code_valid( $code ) {
 	return apply_filters( 'bpt_is_ticket_code_valid', $purchase_id );
 }
 
-
 function bpt_is_wpec_3_8(){
 	if((float)WPSC_VERSION >= 3.8)
 		return true;
@@ -33,19 +32,34 @@ function bpt_get_ticket_total($product_id){
 	if(bpt_is_wpec_3_8())
 		$ticket_total = get_post_meta($product_id, '_wpsc_stock', true);
 	else
-	{
-		$sql=  
 		$ticket_total = $wpdb->get_var( 'SELECT `quantity` FROM `'.$wpdb->prefix . 'wpsc_product_list` WHERE `id` = '.$product_id) ;
-		//exit('<pre> ticket total issss'.print_r($ticket_total,1).'</pre>');
-	}
+	
 	return $ticket_total;
-
 }
-//gets the users tikipress feilds
+
+/**
+ * bpt_get_users_profile_data
+ *
+ * @param int $user_id
+ * @return array containing field_id and value
+ */
 function bpt_get_users_profile_data($user_id){
 	global $wpdb, $bp;
 	$sql =$wpdb->prepare('SELECT `field_id` , `value` FROM `'.$bp->table_prefix.'bp_xprofile_data` WHERE `user_id` = '.$user_id);
 	return apply_filters( 'bpt_get_users_profile_data', $wpdb->get_results( $sql, ARRAY_A ) );
+}
+
+/**
+ * bpt_get_user_profile_data
+ *
+ * @param int $user_id
+ * @return array containing field name and value
+ */
+function bpt_get_user_profile_data($user_id){
+	global $wpdb, $bp;
+	$sql =$wpdb->prepare('SELECT `fields`.`name`, `data`.`value` FROM `' . $bp->table_prefix . 'bp_xprofile_data` `data` INNER JOIN `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` ON `data`.`field_id` = `fields`.`id` WHERE `data`.`user_id`=' . $user_id . ' AND `fields`.`name` != "Name"');
+	return apply_filters( 'bpt_get_user_profile_data', $wpdb->get_results( $sql ) );
+
 }
 
 function bpt_get_ticket_purchases( $user_id=0 ) {

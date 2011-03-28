@@ -119,8 +119,6 @@ global $menu;
 add_action('admin_head', 'bpt_remove_menu');
 
 
- 
-
 /**
  * Add "Settings" link on plugins menu 
  * 
@@ -303,7 +301,7 @@ function bpt_admin_screen_statistics( $settings ) {
 			}
 			next( $statistic );
 		}	
-	} else {
+	}else{
 		$html.= '<h2>There are no statistics for this event.</h2>';
 	}	
 	$html.= '</div>';
@@ -353,6 +351,7 @@ function bpt_admin_screen_ticketcategory( $settings ) {
 <?php
 }
 
+
 /**
  * Metabox for attendees list
  * @param array $settings Array containing bpt settings
@@ -360,103 +359,41 @@ function bpt_admin_screen_ticketcategory( $settings ) {
 function bpt_admin_screen_attendees( $settings ) {
 	global $wpdb, $bp;
 		
-		//this url is used in the function select drop down list
+		echo '<div class="left">';
 		$url ='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=attendees&event=';
-	
-		if ( isset( $_GET['user'] ) ) {
-			$user = get_userdata( $_GET['user'] );
-			$sql = 'SELECT `fields`.`name`, `data`.`value` FROM `' . $bp->table_prefix . 'bp_xprofile_data` `data` INNER JOIN `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` ON `data`.`field_id` = `fields`.`id` WHERE `data`.`user_id`=' . absint( $_GET['user'] ) . ' AND `fields`.`name` != "Name"';
-			$profile_fields = $wpdb->get_results( $sql ); ?>
+		$product_id = bpt_select_event_dropdown( $url );
+		$users = bpt_get_registered_users( $product_id );
+		$user_id = $_GET['user'];
+		//viewing just one attendee
+		if ( isset( $user_id ) ) {
+			$user = get_userdata( $user_id );
+			$profile_fields=bpt_get_user_profile_data($user_id);
 			
-			<h2><?php echo get_avatar( $user->user_email , '50' );?> <?php echo $user->display_name; ?></h2><?php
+			?><h2><?php echo get_avatar( $user->user_email , '50' );?> <?php echo $user->display_name; ?></h2><?php
+			
 			foreach ( (array) $profile_fields as $field ) {
 				$field->value = maybe_unserialize($field->value);
-				if(is_array($field->value)){
+				
+				if(is_array($field->value))
 					$field->value = implode(',', $field->value);
-				}
+				
 				echo '<strong>' . $field->name . '</strong>: ' . $field->value . '<br /><br />';
 			}
-		} else {
+		//viewing all attendees for the event
+		}else{
 			$columns = array( 
 			'author' => __( 'Registered User' )
 		 );
-		 
-	echo '<div class="left">';
-	
-		$product_id = bpt_select_event_dropdown($url);
-		$users = bpt_get_registered_users( $product_id );
-		
-		//exit('<pre>'.print_r($users,1).'</pre>');
-		
-		if(count($users) > 0){
-			register_column_headers( 'attendees' ,$columns ); ?>
-		<table class="widefat fixed" cellspacing="0">
-			<thead>
-				<tr class="thead">
-					<?php print_column_headers( 'attendees' ); ?>
-				</tr>
-			</thead>		
-			<tbody id="users" class="list:user user-list">
-			<?php
-				$style = '';
-					foreach ( (array) $users as $u ) {
-						if ( $style ) {
-							$style = ' class="alternate"';
-						} else {
-							$style = '';
-						}
-						?>
-						<tr <?php echo $style; ?>>
-							<td class="username column-username">
-								<?php echo get_avatar( $u->user_email , '32' ); ?> <a href="<?php echo get_admin_url( null, 'admin.php?page=wpsc-buddypressticketing&tab=attendees&user='.$u->ID, 'admin' ); ?>"><?php echo $u->display_name; ?></a>
-							</td>
-						</tr>
-						<?php
-					} 
-					?>
-	
-			</tbody>
-			<tfoot>
-				<tr class="thead">
-					<?php print_column_headers( 'attendees', false ); ?>
-				</tr>
-			</tfoot>
-		</table>
-		</div><?php
-		}else{
-			echo '<h2>There are no registered attendees for this event yet.</h2>';
-		}?>
-		<div class="left">
-	<h4>Mailing List</h4> 
-	<p>These are the registered attendees who will receive the email.</p>
-	<?php
-	foreach ($users as $user)
-		echo $user->user_email .', ';
-		
-		echo '<h4> Send a group email to all registered attendees </h4>';	
-		echo '<table>';
-		echo '<form action="" method="post">';
-		echo '<input type="hidden" name="attendeeNotificationNonce" id="attendeeNotificationNonce" value="' . wp_create_nonce(plugin_basename(__FILE__)) . '" />';
 
-		echo '<tr valign="top">';
-		echo '<th scope="row"><label for="email_attendees_subject">Subject:</label></th>';
-		echo '<td><input name="email_attendees_subject" size="80" type="text" value=""></td></tr>';
-		echo '<tr valign="top">';
-		echo '<th scope="row"><label for="email_attendees_body">Message:</th>';
-		echo '<td><textarea rows="10" cols="80" name="email_attendees_body"></textarea></td></tr>';
-		echo '<tr><td></td><td><input class="button-primary" type="submit" name="submit_email" value="Send Notification"></td></tr>';
-		echo '</form>';
-		echo '</table>';
-		
-echo '</div>';
-//echo '<div class="clear_float"></div>';
+		if(count($users) > 0)
+			bpt_display_attenddee_table($users,$columns);
+		else
+			echo '<h2>There are no registered attendees for this event yet.</h2> </div>';
 
-	
+        bpt_display_group_email($users);
 	}
-	
-	echo '<div class="clear_float"></div>';
-
 }
+
 
 /**
  * Export PDF metabox
@@ -616,7 +553,14 @@ echo "<img id='background_badge' src='" . $template_url."' alt='badges_template'
 <div class='clear'></div>
 
 <?php }
-/* TikiPress Help menu - pehapes add some images */
+
+
+
+/**
+ * bpt_admin_screen_help_page
+ * Meta Box for bpt help section
+ * @todo add some screen shots, update the badges generation
+ */
 function bpt_admin_screen_help_page(){	
 ?>
 <div id="help">
@@ -755,7 +699,7 @@ function bpt_add_events_wpec_products_pages( $product  ) {
 }
 
 function wpsc_add_purch_cap_product_form($order) {
-//exit('i hate you');
+
 	if(array_search('bpt_add_events_wpec_products_pages', $order) === false) {
 		$order[] = 'bpt_add_events_wpec_products_pages';
 	}	
