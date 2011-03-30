@@ -26,6 +26,37 @@ function bpt_is_wpec_3_8(){
 }
 
 
+/**
+ * bpt_get_all_eventpress_event_details
+ *
+ * @return array containing details of all the events created with eventpress
+ */
+function bpt_get_all_eventpress_event_details(){
+	global $wpdb;
+	$sql = $wpdb->prepare("SELECT `posts`.`ID`, `posts`.`post_title`, `posts`.`post_status` FROM `" . $wpdb->prefix . "posts` `posts` WHERE `posts`.`post_type` = 'ep_event'");
+	$events = $wpdb->get_results( $sql ) ;
+	return apply_filters( 'bpt_get_all_event_details', $wpdb->get_results( $sql ) );
+}
+
+/**
+ * Get ticket fields
+ *
+ * Selects all the buddy press profile fields that are used for tickets
+ * @return $fields array of ticket fields
+ */
+function bpt_get_ticket_fields() {
+	global $wpdb, $bp;
+	$fields=$wpdb->get_results( 'SELECT `fields`.`name`, `fields`.`id` FROM `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id`=0' );
+	return $fields;
+}
+
+
+/**
+ * bpt_get_ticket_total
+ *
+ * @param int $product_id this product/ticket ID
+ * @return Ticket total int wpec stock quantity for this product
+ */
 function bpt_get_ticket_total($product_id){
 	global $wpdb;
 	
@@ -36,6 +67,8 @@ function bpt_get_ticket_total($product_id){
 	
 	return $ticket_total;
 }
+
+
 
 /**
  * bpt_get_users_profile_data
@@ -418,3 +451,21 @@ function LoadData( $settings )
 	    }
 	}
 }
+
+/**
+ * Create counter for tickets sold..
+ * This function is not called anywhere but I didnt want to remove it just encase it has later use
+ *
+ */
+/*
+function bpt_get_total_quanity($product_id){
+	global $wpdb;
+	$sql = 'SELECT SUM(`'.WPSC_TABLE_CART_CONTENTS.'`.`quantity`) FROM `'.WPSC_TABLE_CART_CONTENTS.'` LEFT JOIN `'.WPSC_TABLE_PURCHASE_LOGS.'` ON `'.WPSC_TABLE_CART_CONTENTS.'`.`purchaseid` = `'.WPSC_TABLE_PURCHASE_LOGS.'`.`id` WHERE `'.WPSC_TABLE_PURCHASE_LOGS.'`.`processed` >1 AND `'.WPSC_TABLE_PURCHASE_LOGS.'`.`processed` < 5  AND `'.WPSC_TABLE_CART_CONTENTS.'`.`prodid`='.$id;
+	$num = $wpdb->get_var($sql);
+	if($num != null){
+		return $num;
+	}else{
+		return 0;
+	}
+}
+*/

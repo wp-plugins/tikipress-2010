@@ -1,4 +1,41 @@
 <?php
+
+/**
+ * Event selection dropdown
+ * @return array Array of product IDs associated with event 
+ * $url is the location this is used because atendees and stats page have different urls but use same function. More tabs etc can now be added and used
+ */
+ 
+function bpt_select_event_dropdown($url) {
+	global $wpdb;
+	
+	$sql = "SELECT `id`, `post_title` FROM " . $wpdb->posts . " WHERE `post_type` = 'ep_event' AND post_status != 'auto-draft'";
+	$events = $wpdb->get_results( $sql ) ; ?>
+
+	<label for="events">Select an Event:</label>
+	<select name="events_dropdown" style="width:200px" onchange="location.href='<?php bloginfo( 'url' );?><?php echo $url;?>'+document.getElementById('events_dropdown').value;" id="events_dropdown"><?php
+	foreach( (array) $events as $event ) {
+		$selected='';
+		if( $event->id == $_GET['event'] )
+			$selected="selected='selected'";
+		echo '<option ' . $selected . ' value="' . $event->id . '">' . $event->post_title . '</option>';
+	}
+	?>
+	</select>
+	<?php
+
+	if ( isset ( $_GET['event'] ) ) {
+	 	$event = absint( $_GET['event'] );
+	} else {
+		$event = $wpdb->get_var( "SELECT `id` FROM " . $wpdb->prefix . "posts WHERE `post_type` = 'ep_event' AND `post_status` != 'draft' LIMIT 1" );
+	}	 
+	
+	$product_id = $wpdb->get_col( 'SELECT post_id FROM ' . $wpdb->postmeta . ' WHERE meta_key = "_bpt_event_prod_id" AND meta_value = ' . $event );
+	
+	return $product_id[0];
+}
+
+
 /**
  * bpt_display_graph
  *
@@ -14,6 +51,19 @@ $html.='<div class="clear"></div>';
 
 return $html;
 }
+
+/**
+ * bpt_get_quantities_sold
+ *
+ * @param int $product_id
+ * @return int count $users this is the number of users who 
+ * have bought tickets to the product/event
+ */
+function bpt_get_quantities_sold($product_id){
+	$users = bpt_get_registered_users( $product_id, true );
+	return count($users);
+	}
+	
 
 /**
  * bpt_display_graph
@@ -319,6 +369,149 @@ function bpt_preview_divs(){
 	return $html;
 }
 
+/**
+ * bpt_pdf
+ *
+ * Output attendees list PDF
+ * @param $settings array selected feild ids for pdf generation
+ *
+ */
+function bpt_pdf($settings) {
+
+	$pdf=new PDF();
+	$pdf->AliasNbPages();
+	
+	//load data
+	$pdf->LoadData($settings);
+	$pdf->SetFont( 'Arial', '', 8);
+	$pdf->AddPage(L);
+	$pdf->PrintTable();
+	$pdf->Output();
+	exit();
+}
+
+
+/**
+ * bpt_badges_pdf 
+ *
+ * Output attendee badge PDF
+ * @param $settings array selected feild ids for pdf generation 
+ * @param $files $_FILES array for image upload
+ *
+ */
+function bpt_badges_pdf($settings, $files){
+
+	global $wpdb;
+
+	@ini_set('log_errors','on');
+	@ini_set('display_errors','on');
+	
+	require_once('bpt-functions.php');
+	
+	@ini_set( 'memory_limit', '128M' );
+	@ini_set( 'max_input_time', '240' );
+	
+	// Set up the new PDF object
+	$pdf = new PDF( 'L', 'in', 'Legal' );
+	
+	//load the attendees
+	$attendees = $pdf->LoadBadgesData($settings);
+	
+	// Remove page margins.
+	$pdf->SetMargins(0, 0);
+	$pdf->SetFont('helvetica','',10);
+	
+	// Disable auto page breaks.
+	$pdf->SetAutoPageBreak(0);
+	
+	// Set up badge counter
+	$counter = 1;
+
+for ( $i = 0; $i < count($attendees); $i++ ) {
+
+	// Set the text color to black.
+	$pdf->SetTextColor(223,125,80);
+	
+	// Grab the template file that will be used for the badge page layout
+	//for here and now we only have one template but we plan on adding more and giving the user a choice
+	require('templates/sf2010.php');
+	
+	// Download and store the gravatar for use, FPDF does not support gravatar formatted image links the 
+	// user email has been saved into array[7] ready to go just for this reason!
+	$grav_file_raw = WP_CONTENT_DIR.'/plugins/'.WPSC_TICKETS_FOLDER.'/images/temp/' . $attendees[$i][0] . '-' . rand();
+	$grav_url = 'http://www.gravatar.com/avatar/' . md5($attendees[$i][7]) . '?s=512&d=mm';
+	$grav_data = get_file_by_curl( $grav_url, $grav_file_raw );
+	
+	
+	if ( !$grav_file = bpt_pngtojpg($grav_file_raw) ) {
+		$grav_file_extension = bpt_get_image_extension($grav_file_raw);
+		$grav_file = $grav_file_raw . $grav_file_extension;
+		rename( $grav_file_raw, $grav_file );
+	}
+	
+	//if there is an image then upload it otherwise carry on
+	if ($files['logo_upload']['name'] != ""){
+		$back_path = $pdf->LoadBadgeImage($files);
+	
+	// Add the background image for the badge to the page
+	$pdf->image($back_path, $background_x, $background_y, 2.8, 1.23);
+	
+	//set all images to the man.jpg for testing
+	
+	$pdf->image($grav_file, $avatar_x, $avatar_y, 0.6, 0.6);
+	$pdf->SetDrawColor(187,187,187);
+	$pdf->Rect($avatar_x - 0.02, $avatar_y - 0.02, 0.64, 0.64);
+	
+	// Set the co-ordinates, font $attendees[$i][0] [0] relates to template area 1 and so on.
+	$pdf->SetXY($text_x, $text_y);
+	$pdf->SetFont('helvetica','b',28);
+	$pdf->SetTextColor(51,51,51);
+	$pdf->MultiCell(0, 0,ucwords(stripslashes($attendees[$i][0])),0,'L');
+	
+	
+	$pdf->SetXY($text_x, $text_y + 0.35);
+	$pdf->SetFont('helvetica','',18);
+	//change area two font color
+	$pdf->SetTextColor(55,153,153);
+	$pdf->MultiCell(0, 0,stripslashes(ucwords($attendees[$i][1])),0,'L');
+	
+	$pdf->SetXY($infotext_x, $infotext_y);
+	$pdf->SetFont('helvetica','',10);
+	$pdf->SetTextColor(99,100,102);
+	
+	
+	$pdf->SetFont('helvetica','b',11);
+	$pdf->MultiCell( 2.4, 0.21, stripslashes($attendees[$i][2]), 0, 'L' );
+	$infotext_y += 0.23;
+	
+	$pdf->SetXY($infotext_x, $infotext_y);
+	$pdf->SetFont('helvetica','',10);
+	$pdf->MultiCell( 2.4, 0.21, stripslashes($attendees[$i][3]), 0, 'L' );
+	$infotext_y += 0.23;
+	
+	$pdf->SetXY($infotext_x, $infotext_y);
+	$pdf->SetFont('helvetica','b',11);
+	$pdf->MultiCell( 2.4, 0.21, stripslashes($attendees[$i][4]), 0, 'L' );
+	
+	$pdf->SetXY($years_x + 0.21, $years_y);
+	$pdf->SetFont('helvetica','',8);
+	$pdf->MultiCell( 2.4, 0.21, stripslashes($attendees[$i][5]), 0, 'R' );
+	//change bottom fotter background color
+	$pdf->SetFillColor( 55, 153, 153 );
+	$pdf->Rect( $typebox_x, $typebox_y, 3, 0.5, 'F' );
+	
+	$pdf->SetTextColor(255, 255, 255);
+	$pdf->SetXY($typebox_x, $typebox_y);
+	$pdf->SetFont('helvetica','b', 12);
+	$pdf->MultiCell( 3, 0.5, strtoupper($attendees[$i][6]), 0, 'C' );
+	
+	$pdf->SetDrawColor(187,187,187);
+	$counter++;
+	}
+	$pdf->Output();
+	exit();
+	}
+}
 
 function get_file_by_curl( $file, $newfilename ) {
 
@@ -333,7 +526,17 @@ function get_file_by_curl( $file, $newfilename ) {
     curl_close( $ch );
 }
 
-function get_image_extension($filename) {
+
+/**
+ * bpt_get_image_extension 
+ *
+ * @param $filename
+ * @return string file extension
+ *
+ *Check the file extension
+ *
+ */
+function bpt_get_image_extension($filename) {
 	$type_mapping =  array( '1' => 'image/gif', '2' => 'image/jpeg', '3' => 'image/png' );
 	@$size = GetImageSize( $filename );
 
@@ -350,8 +553,15 @@ function get_image_extension($filename) {
 	return '.jpg';
 }
 
-function pngtojpg( $file ) {
-	if ( get_image_extension( $file ) == '.png' ) {
+/**
+ * bpt_pngtojpg 
+ *
+ * @param $filename
+ *
+ *if the file is a png convert it to a jpeg
+ */
+function bpt_pngtojpg( $file ) {
+	if ( bpt_get_image_extension( $file ) == '.png' ) {
 		$image = imagecreatefrompng( $file );
 		imagejpeg( $image, $file . '.jpg', 80 );
 		return $file . '.jpg';

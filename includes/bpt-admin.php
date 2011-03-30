@@ -236,6 +236,87 @@ function bpt_admin() {
 }
 
 
+/**
+ * Metabox function for wpsc product editing page
+ * @param int $product_id Product id
+ */
+function bpt_add_events_wpec_products_pages( $product  ) { 
+
+	global $wpdb;
+	$product_id = $product->id;
+	
+	if ( absint( $product_id ) ) {
+		echo "You have already selected an event for this product changing it is not reccommended if people have already bought tickets!";
+	}else{
+	echo '<P>Select the Event that this ticket product is for </p>';
+	}
+	
+	$events = bpt_get_all_eventpress_event_details();
+	$event_id = get_post_meta( $product_id, '_bpt_event_prod_id', true );
+
+	foreach ( (array) $events as $event ){
+		if ( $event->post_status == 'publish' ){ ?> 
+			<input type='radio' <?php if ( $event_id === $event->ID ) { echo 'checked="checked"'; } ?> value= "<?php echo $event->ID ?>" name="event_ticket" /> &nbsp; <?php echo $event->post_title . "<br />";
+		}		
+	}
+	echo '<p><small>NOTE: You must create the event before you create the ticket product</small></p>';		
+}
+
+/**
+ * bpt_wpsc_add_event_wpsc_product_form
+ * @param $order - the order the meta box appears in the product add / edit form
+ * @return $order - the new order
+ * 
+ */
+function bpt_wpsc_add_event_wpsc_product_form($order) {
+	if(array_search('bpt_add_events_wpec_products_pages', $order) === false) {
+		$order[] = 'bpt_add_events_wpec_products_pages';
+	}	
+return $order;
+}
+
+/**
+ * bpt_wpsc_new_meta_boxes
+ * @param $order - the order the meta box appears in the product add / edit form
+ * 
+ * This is the new way wpec-3.8 adds its meta boxes
+ */
+function bpt_wpsc_new_meta_boxes() {
+	add_meta_box( 'bpt_add_events_wpec_products_pages', 'Buddy Press Tickets', 'bpt_add_events_wpec_products_pages', 'wpsc-product', 'normal', 'high' , 1);
+	}
+	
+	if( (float)WPSC_VERSION < 3.8 ){
+		add_filter('wpsc_products_page_forms', 'bpt_wpsc_add_event_wpsc_product_form');
+		add_action( 'wpsc_edit_product', 'bpt_admin_submit_product_37', 10, 1 );	
+	}else{
+		add_action( 'add_meta_boxes', 'bpt_wpsc_new_meta_boxes');
+		add_action( 'save_post', 'bpt_admin_submit_product_38', 10, 2 );
+	}
+
+/**
+ * bpt_save_product_deets
+ * wpec3.7 will use this function to save the event / product relationship
+ * this has been hacked together for backwards compatiblity
+ */
+function bpt_admin_submit_product_37(){
+	update_post_meta( $_POST['product_id'], '_bpt_event_prod_id', $_POST['event_ticket'] );
+}
+
+
+/**
+ * bpt_admin_submit_product
+ * wpec 3.8 saves the product details for 3.8
+ * 
+ */
+function bpt_admin_submit_product_38( $post_ID, $post ) {
+	global $current_screen, $wpdb;
+
+	if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || $current_screen->id != 'wpsc-product' )
+		return $post_ID;
+		
+	update_post_meta( $post_ID, '_bpt_event_prod_id', $_POST['event_ticket'] );
+}
+
 
 /**
  * Metabox for statistics
@@ -243,7 +324,7 @@ function bpt_admin() {
  */	
 function bpt_admin_screen_statistics( $settings ) {
 	global $wpdb, $bp;
-	$html= '<div class="float_left">';
+	?> <div class="float_left"> <?php
 	
 	$url ='/wp-admin/admin.php?page=wpsc-buddypressticketing&event=';
 	$product_id = bpt_select_event_dropdown($url);
@@ -253,7 +334,7 @@ function bpt_admin_screen_statistics( $settings ) {
 	$ticket_total = bpt_get_ticket_total($product_id);
 	$remaining_tickets = ($ticket_total - $tickets_sold);
 
-	$html.= '<h2>Ticket stock control</h2>';
+	$html= '<h2>Ticket stock control</h2>';
 	
 	if ($ticket_total == 0)
 		$html.= '<p> You have not entered a ticket limit for this event, to do so please edit your ticket product. </p>';
@@ -621,285 +702,5 @@ function bpt_admin_screen_help_page(){
 	</p>
 </div>
 	<?php
-}
-
-/**
- * Metabox function for wpsc product editing page
- * @param int $product_id Product id
- */
-function bpt_add_events_wpec_products_pages( $product  ) { 
-
-	global $wpdb;
-	$product_id = $product->id;
-	
-	//$product_id = $product->ID;
-
-	
-	if ( absint( $product_id ) ) {
-
-		echo "You have already selected an event for this product!";
-		//return true;
-	}
-	//move this to its own function
-		$sql = "SELECT `posts`.`ID`, `posts`.`post_title`, `posts`.`post_status` FROM `" . $wpdb->prefix . "posts` `posts` WHERE `posts`.`post_type` = 'ep_event'";
-		$events = $wpdb->get_results( $sql ) ;
-		
-		$event_id = get_post_meta( $product_id, '_bpt_event_prod_id', true );
-	
-		echo '<P>Select the Event that this ticket product is for </p>';
-		
-			foreach ( (array) $events as $event ){
-				if ( $event->post_status == 'publish' ){
-				?> <input type='radio' <?php if ( $event_id === $event->ID ) { echo 'checked="checked"'; } ?> value= "<?php echo $event->ID ?>" name="event_ticket" /> &nbsp; <?php echo $event->post_title . "<br />";
-			
-				}		
-			}
-		echo '<p><small>NOTE: You must create the event before you create the ticket product</small></p>';		
-}
-
-function wpsc_add_purch_cap_product_form($order) {
-
-	if(array_search('bpt_add_events_wpec_products_pages', $order) === false) {
-		$order[] = 'bpt_add_events_wpec_products_pages';
-	}	
-return $order;
-}
-
-function wpsc_new_meta_boxes() {
-
-		add_meta_box( 'bpt_add_events_wpec_products_pages', 'Buddy Press Tickets', 'bpt_add_events_wpec_products_pages', 'wpsc-product', 'normal', 'high' , 1);
-	}
-add_action( 'add_meta_boxes', 'wpsc_new_meta_boxes');
-	
-if( (float)WPSC_VERSION < 3.8 ){
-	add_filter('wpsc_products_page_forms', 'wpsc_add_purch_cap_product_form');
-	add_action( 'wpsc_edit_product', 'bpt_save_product_deets', 10, 1 );	
-}
-
-//hacked together for 3.7 compatability
-function bpt_save_product_deets(){
-update_post_meta( $_POST['product_id'], '_bpt_event_prod_id', $_POST['event_ticket'] );
-}
-
-
-
-
-function bpt_admin_submit_product( $post_ID, $post ) {
-	global $current_screen, $wpdb;
-	//exit( '<pre> event id is'.print_r($_POST,1).'</pre>');
-	if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || $current_screen->id != 'wpsc-product' )
-		return $post_ID;
-	
-		update_post_meta( $post_ID, '_bpt_event_prod_id', $_POST['event_ticket'] );
-
-	}
-
-add_action( 'save_post', 'bpt_admin_submit_product', 10, 2 );
-	
-	
-//add_action( 'wpsc_edit_product', 'bpt_add_events_wpec_products_pages', 10, 1 );			
-
-/**
- * Get ticket fields
- * Selects all the buddy press profile fields that are used for tickets
- */
-function bpt_get_ticket_fields() {
-	global $wpdb, $bp;
-	$fields=$wpdb->get_results( 'SELECT `fields`.`name`, `fields`.`id` FROM `' . $bp->table_prefix . 'bp_xprofile_fields` `fields` WHERE `fields`.`parent_id`=0' );
-	return $fields;
-}
-
-
-
-
-
-/**
- * Event selection dropdown
- * @return array Array of product IDs associated with event 
- * $url is the location this is used because atendees and stats page have different urls but use same function. More tabs etc can now be added and used
- */
- 
-function bpt_select_event_dropdown($url) {
-	global $wpdb;
-	
-	$sql = "SELECT `id`, `post_title` FROM " . $wpdb->posts . " WHERE `post_type` = 'ep_event' AND post_status != 'auto-draft'";
-	$events = $wpdb->get_results( $sql ) ; ?>
-
-	<label for="events">Select an Event:</label>
-	<select name="events_dropdown" style="width:200px" onchange="location.href='<?php bloginfo( 'url' );?><?php echo $url;?>'+document.getElementById('events_dropdown').value;" id="events_dropdown"><?php
-	foreach( (array) $events as $event ) {
-		$selected='';
-		if( $event->id == $_GET['event'] )
-			$selected="selected='selected'";
-		echo '<option ' . $selected . ' value="' . $event->id . '">' . $event->post_title . '</option>';
-	}
-	?>
-	</select>
-	<?php
-
-	if ( isset ( $_GET['event'] ) ) {
-	 	$event = absint( $_GET['event'] );
-	} else {
-		$event = $wpdb->get_var( "SELECT `id` FROM " . $wpdb->prefix . "posts WHERE `post_type` = 'ep_event' AND `post_status` != 'draft' LIMIT 1" );
-	}	 
-	
-	$product_id = $wpdb->get_col( 'SELECT post_id FROM ' . $wpdb->postmeta . ' WHERE meta_key = "_bpt_event_prod_id" AND meta_value = ' . $event );
-	
-	return $product_id[0];
-}
-
-
-/**
- * Output PDF
- *
- */
-function bpt_pdf($settings) {
-//exit('<pre>'.print_r($settings,true).'</pre>');
-
-	$pdf=new PDF();
-	$pdf->AliasNbPages();
-	
-	//load data
-	$pdf->LoadData($settings);
-	$pdf->SetFont( 'Arial', '', 8);
-	$pdf->AddPage(L);
-	$pdf->PrintTable();
-	$pdf->Output();
-	exit();
-}
-
-function bpt_badges_pdf($settings, $files){
-//exit('<pre> testdollafiles'.print_r($files,true).'</pre>'.'<pre> test'.print_r($settings,true).'</pre>');
-	global $wpdb;
-
-@ini_set('log_errors','on');
-@ini_set('display_errors','on');
-
-//require_once(WPSC_FILE_PATH."/wpsc-includes/fpdf/mc_table.php");
-require_once('bpt-functions.php');
-
-@ini_set( 'memory_limit', '128M' );
-@ini_set( 'max_input_time', '240' );
-// Set up the new PDF object
-$pdf = new PDF( 'L', 'in', 'Legal' );
-
-$attendees = $pdf->LoadBadgesData($settings);
-// Remove page margins.
-$pdf->SetMargins(0, 0);
-$pdf->SetFont('helvetica','',10);
-// Disable auto page breaks.
-$pdf->SetAutoPageBreak(0);
-
-// Set up badge counter
-$counter = 1;
-
-for ( $i = 0; $i < count($attendees); $i++ ) {
-$default = WP_CONTENT_DIR.'/plugins/'.WPSC_TICKETS_FOLDER.'/images/default.jpg';
-
-		// Set the text color to black.
-		$pdf->SetTextColor(223,125,80);
-
-		// Grab the template file that will be used for the badge page layout
-		//for here and now if you wanted to use your own template put it in the same directory and replace the file name
-		require('templates/sf2010.php');
-		
-		// Download and store the gravatar for use, FPDF does not support gravatar formatted image links the user email has been saved into array[7] ready to go just for this reason!
-		$grav_file_raw = WP_CONTENT_DIR.'/plugins/'.WPSC_TICKETS_FOLDER.'/images/temp/' . $attendees[$i][0] . '-' . rand();
-		$grav_url = 'http://www.gravatar.com/avatar/' . md5($attendees[$i][7]) . '?s=512&d=mm';
-		$grav_data = get_file_by_curl( $grav_url, $grav_file_raw );
-
-		// Check if the image is a png, if it is, convert it, otherwise add a JPG extension to the raw filename
-		if ( !$grav_file = pngtojpg($grav_file_raw) ) {
-			$grav_file_extension = get_image_extension($grav_file_raw);
-			$grav_file = $grav_file_raw . $grav_file_extension;
-			rename( $grav_file_raw, $grav_file );
-		}
-		if (isset($files)){
-			$back_path = $pdf->LoadBadgeImage($files);
-		}else{
-			$back_path = WP_CONTENT_DIR.'/plugins/'.WPSC_TICKETS_FOLDER.'/images/badgelogo2.jpg';
-		}
-		// Add the background image for the badge to the page
-	
-		$pdf->image($back_path, $background_x, $background_y, 2.8, 1.23);
-
-		//set all images to the man.jpg for testing
-
-		$pdf->image($grav_file, $avatar_x, $avatar_y, 0.6, 0.6);
-		$pdf->SetDrawColor(187,187,187);
-		$pdf->Rect($avatar_x - 0.02, $avatar_y - 0.02, 0.64, 0.64);
-
-		// Set the co-ordinates, font $attendees[$i][0] [0] relates to template area 1 and so on.
-		$pdf->SetXY($text_x, $text_y);
-		$pdf->SetFont('helvetica','b',28);
-		$pdf->SetTextColor(51,51,51);
-		$pdf->MultiCell(0, 0,ucwords(stripslashes($attendees[$i][0])),0,'L');
-
-
-		$pdf->SetXY($text_x, $text_y + 0.35);
-		$pdf->SetFont('helvetica','',18);
-		//change area two font color
-		$pdf->SetTextColor(55,153,153);
-		$pdf->MultiCell(0, 0,stripslashes(ucwords($attendees[$i][1])),0,'L');
-
-		$pdf->SetXY($infotext_x, $infotext_y);
-		$pdf->SetFont('helvetica','',10);
-		$pdf->SetTextColor(99,100,102);
-
-	
-		$pdf->SetFont('helvetica','b',11);
-		$pdf->MultiCell( 2.4, 0.21, stripslashes($attendees[$i][2]), 0, 'L' );
-		$infotext_y += 0.23;
-		
-		$pdf->SetXY($infotext_x, $infotext_y);
-		$pdf->SetFont('helvetica','',10);
-		$pdf->MultiCell( 2.4, 0.21, stripslashes($attendees[$i][3]), 0, 'L' );
-		$infotext_y += 0.23;
-			
-		$pdf->SetXY($infotext_x, $infotext_y);
-		$pdf->SetFont('helvetica','b',11);
-		$pdf->MultiCell( 2.4, 0.21, stripslashes($attendees[$i][4]), 0, 'L' );
-				
-		$pdf->SetXY($years_x + 0.21, $years_y);
-		$pdf->SetFont('helvetica','',8);
-		$pdf->MultiCell( 2.4, 0.21, stripslashes($attendees[$i][5]), 0, 'R' );
-		//change bottom fotter background color
-		$pdf->SetFillColor( 55, 153, 153 );
-		$pdf->Rect( $typebox_x, $typebox_y, 3, 0.5, 'F' );
-
-		$pdf->SetTextColor(255, 255, 255);
-		$pdf->SetXY($typebox_x, $typebox_y);
-		$pdf->SetFont('helvetica','b', 12);
-		$pdf->MultiCell( 3, 0.5, strtoupper($attendees[$i][6]), 0, 'C' );
-
-		$pdf->SetDrawColor(187,187,187);
-		$counter++;
-}
-$pdf->Output();
-exit();
-}
-
-
-/**
- * Create counter for tickets sold..
- *
- */
-function bpt_get_total_quanity($product_id){
-	global $wpdb;
-	$sql = 'SELECT SUM(`'.WPSC_TABLE_CART_CONTENTS.'`.`quantity`) FROM `'.WPSC_TABLE_CART_CONTENTS.'` LEFT JOIN `'.WPSC_TABLE_PURCHASE_LOGS.'` ON `'.WPSC_TABLE_CART_CONTENTS.'`.`purchaseid` = `'.WPSC_TABLE_PURCHASE_LOGS.'`.`id` WHERE `'.WPSC_TABLE_PURCHASE_LOGS.'`.`processed` >1 AND `'.WPSC_TABLE_PURCHASE_LOGS.'`.`processed` < 5  AND `'.WPSC_TABLE_CART_CONTENTS.'`.`prodid`='.$id;
-	$num = $wpdb->get_var($sql);
-	if($num != null){
-		return $num;
-	}else{
-		return 0;
-	}
-}
-
-/* used for the counter on the stats page */
-function bpt_get_quantities_sold($product_id){
-	
-	$users = bpt_get_registered_users( $product_id, true );
-	return count($users);
-	}
-	
+}	
 ?>
