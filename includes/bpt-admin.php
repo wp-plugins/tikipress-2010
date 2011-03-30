@@ -426,133 +426,92 @@ function bpt_admin_screen_pdf( $settings, $product_id) {
  */
 function bpt_admin_screen_badges( $settings, $product_id ) {
 	global $wpdb, $bp;
+	
 	$url='/wp-admin/admin.php?page=wpsc-buddypressticketing&tab=badges&event='; 
 	$user_details = wp_get_current_user();
 	$user_email=$user_details->data->user_email;
 	
-    ?>
-
-    <div class="float_left" id="badges_options">
-    <p><?php _e('To use the badge generator first select the event you would like to create the ticket for, then select which information you would like to use on your badge. You should see a live preview - once your happy with it export it to a pdf', 'bpt');?></p>
-	<p><?php $product_id = bpt_select_event_dropdown($url); ?></p>
-		<br />
-				<label for='bpt_badges_pdf'>Upload your logo:</label>
-					<input type="file" name="logo_upload" /> 	
-			<table>
-				<tr id="grav">
-					<td>Show Gravitar</td>
-					<td class="grav_radio"> Yes <input type='radio' name='badges_gravatar' value='1' >  No <input type='radio' checked = 'checked' name='badges_gravatar' value='0' ></td>
-				</tr>
-			
-				<?php
-				/* 	these fields are collected from gravatar or the user account and not the buddypress profile feilds like the event data */
-				$extra_fields = array(
-				array(name => "Twitter Id", id => 'badges_twitter',),
-				array(name => "Site Link", id => 'badges_site',),
-				array(name => "Email Address", id => 'badges_email',)
-				);
-				
-			
-				$fields= bpt_get_ticket_fields();
-				$all_feilds = array_merge($extra_fields, $fields);
-			
-					for($j=0; $j < count($all_feilds); $j++){
-					$select_id = 'Select'.($j+1) ;
-					$select_name = "bpt[fields][".$value."]"; 
-					echo '<tr class="bpt_template_select_row">';
-					if($j < 3){
-						echo '<td class="bpt_template_select">'.$all_feilds[$j]['name'] . '</td>';
-						$value = $all_feilds[$j]['id'];
-					}else{
-						echo '<td class="bpt_template_select">'.$all_feilds[$j]->name . '</td>';
-						$value = $all_feilds[$j]->id;
-					}
-					$select_name = "bpt[fields][".$value."]"; 
-				
-					 ?>	<td class="bpt_template_select"> <select id="<?php echo $select_id ?>" name="<?php echo $select_name ?>" onchange="javascript:SelectBoxes(this);">
+	/* 	these fields are collected from gravatar or the user account and not the buddypress profile feilds like the event data */
+	$extra_fields = array(
+	array(name => "Twitter Id", id => 'badges_twitter',),
+	array(name => "Site Link", id => 'badges_site',),
+	array(name => "Email Address", id => 'badges_email',)
+	);		
+	$fields= bpt_get_ticket_fields();
+	$all_fields = array_merge($extra_fields, $fields);?>
 	
-					<?php echo "<option value='exclude' selected='selected'>Exclude</option>";
-	  					//for each template posistion create that option will need to be not hard coded when more templates are added
-	  				for($i=1; $i < 8; $i++){
-						echo '<option value="' . $i . '"> Template Area ' . $i . '</option>';
-	  				}
-
-
-	 				 }
-					echo "</select> </td></tr>"; ?>
-
-						
+	<div class="left" id="badges_options">
+		<p><?php _e('To use the badge generator first select the event you would like to create the ticket for, then select which information you would like to use on your badge. You should see a live preview - once your happy with it export it to a pdf', 'bpt');?></p>
+		<p><?php $product_id = bpt_select_event_dropdown($url); ?></p><br />
+		
+		<label for='bpt_badges_pdf'>Upload your logo:</label>
+		<input type="file" name="logo_upload" /> 	
+		
+		<table>
+			<tr id="grav">
+				<td>Show Gravitar</td>
+				<td class="grav_radio"> Yes <input type='radio' name='badges_gravatar' value='1' >  No <input type='radio' checked = 'checked' name='badges_gravatar' value='0' ></td>
+			</tr>
+			
+		<?php
+		for($j=0; $j < count($all_fields); $j++){
+			
+			$select_id = 'Select'.($j+1) ;
+			$select_name = "bpt[fields][".$value."]"; ?>
+			<tr class="bpt_template_select_row"> <?php
+				//if we are accessing grav fields - these three $extrafields always go first in 
+				//the array - need to convert them all to objects or standard array options
+				if($j < 3){
+					echo '<td class="bpt_template_select">'.$all_fields[$j]['name'] . '</td>';
+					$value = $all_fields[$j]['id'];
+				}else{
+					echo '<td class="bpt_template_select">'.$all_fields[$j]->name . '</td>';
+					$value = $all_fields[$j]->id;
+				}
+				$select_name = "bpt[fields][".$value."]"; 
 				
+				//generate the select boxes and their options
+				//for each template posistion ($i) create that option will need to 
+				//be not hard coded when more templates are added ?>
+				<td class="bpt_template_select"> 
+					<select id="<?php echo $select_id ?>" name="<?php echo $select_name ?>" onchange="javascript:SelectBoxes(this);">
+						<option value='exclude' selected='selected'>Exclude</option> <?php
+						for($i=1; $i < 8; $i++) 
+							echo '<option value="' . $i . '"> Template Area ' . $i . '</option>'; ?>
+					</select> 
+				</td>
+			</tr> <?php 
+		} 	
+			?>		
 		</table>
 		<input type="hidden" name="bpt_badges_pdf" value="true" />
-					<input type="submit" class="button-primary" value="<?php _e( 'Export badges as PDF', 'bpt' ); ?>" />
-		
-</div>
-<?php $user_data = get_user_preview_data($all_feilds); ?>
+		<input type="submit" class="button-primary" value="<?php _e( 'Export badges as PDF', 'bpt' ); ?>" />
+	</div>
+<?php $user_data = generate_user_preview_data(); ?>
 
+	<div id="float_left_img2" class="float_left_img2">
+		<p><strong>Your Super Cool Badge Builder</strong></p>
+		<p>Below is a preview of your badge and current settings - change the template options to change the look of your badge! Don't forget to export when your happy with it!</p>
+		<?php $template_url = plugins_url('templates/bpt/badges/wordcamp-ticket-badge.jpg', __FILE__); ?>
+		<div id="template_area" class="template_area">
+			<?php
+			echo "<img id='background_badge' src='" . $template_url."' alt='badges_template' />" ;
+			echo $preview_divs = bpt_preview_divs(); 
+			?>
+		</div> <!-- template_area -->
+	</div> <!-- float_left_img2 -->
 
-
-<div class="float_left_img2">
-<p><strong>Your Super Cool Badge Builder</strong></p>
-<p>Below is a preview of your badge and current settings - change the template options to change the look of your badge! Don't forget to export when your happy with it!</p>
-<!-- these are the divs that get shown and hidden they can probably be moved into another template file (with their own css sheet) as more templates will be added -->
-<div class="template_area">
-<?php $template_url = plugins_url('templates/bpt/badges/wordcamp-ticket-badge.jpg', __FILE__);
-echo "<img id='background_badge' src='" . $template_url."' alt='badges_template' />" ; ?>
-
-<div class="show_avatar">
-	 <div id="show_avatar" class="" style="display: block">
-        <?php echo get_avatar( $user_email , '50' ); ?>
-     </div>
-</div>
-<div class="area1_container">
-    <div id="1" class="area1" style="display: none">
-       <strong></strong>
-    </div>
-</div>
-
-
-<div class="area2_container">
-    <div id="2" class="area2" style="display: none"></div>	
-</div>
-<div class="area_container">
-   	 <div id="6" class="area6" style="display: none"></div>
-</div>
-<div class="area3_container">
-    <div id="3" class="area3" style="display: none">
-        <strong></strong>
-    </div>
-</div>
-<div class="area_container">
-    <div id="4" class="area4" style="display: none">
-        
-     </div>
-</div>
-<div class="area_container">
-     <div id="5" class="area5" style="display: none">
-       <strong></strong> 
-     </div>
-</div>
-<div class="area7_container">
-	 <div id="7" class="area7" style="display: none">
-       
-     </div>
-</div>
-
-</div>
-</div>
-
-
-<div class="float_left_img">
-	<p><strong>Area Guide</strong></p>
-	<p>Use the area guide to see the location of the different template positions</p>
-	<?php $template_url = plugins_url('templates/bpt/badges/badges_template.jpg', __FILE__);
-	echo "<img width='200px' src='" . $template_url."' alt='badges_template' />" ; ?>
-</div>
-
-<div class='clear'></div>
-
-<?php }
+	<?php $template_url = plugins_url('templates/bpt/badges/badges_template.jpg', __FILE__); ?>
+	<div class="float_left_img">
+		<p><strong>Area Guide</strong></p>
+		<p>Use the area guide to see the location of the different template positions</p>
+		<?php
+		echo "<img width='200px' src='" . $template_url."' alt='badges_template' />" ; 
+		?>
+	</div>
+	<div class='clear'></div>
+	<?php
+ }
 
 
 
@@ -752,64 +711,6 @@ function bpt_get_ticket_fields() {
 
 
 
-/* gets out the current users info and creates a js array used to generate the text into the badge preview */
-function get_user_preview_data($all_feilds){
-
-global $bp;
-//if current user not registered need to use first regerstees deets :)
-$user_id = $bp->loggedin_user->id;
-$current_user_profile = bpt_get_users_profile_data($user_id) ;
-$user_email = $bp->loggedin_user->userdata->user_email;
-	
-		$twitter_id = '';
-		//$user_email = $user->user_email;
-			/* connect to gravatar to get the user site address, twitter id - this code can be refactored to be used with the badges pdf*/
-
-		$usermd5=md5( strtolower( trim( $user_email ) ) );	
-		$old_track = ini_set('track_errors', '1');
-		if(!$str = @file_get_contents( 'http://www.gravatar.com/'.$usermd5.'.php' ))
-			$profile=0;
-		else
-			$profile = unserialize( $str );
-		
-		ini_set('track_errors', $old_track);
-
-		//check if the users have a gravatar profile before trying to get their info
-		if ($profile != 'User not found'){
-			$user_url=($url)?$url:$profile['entry'][0]['urls'][0]['value'];
-				foreach((array)$profile['entry'][0]['accounts'] as $account){
-					if($account["domain"]=="twitter.com")
-						$twitter_id = $account["display"];
-				}
-		}
-		
-				if (!$twitter_id)
-					$twitter_id = "@Twitter";
-				
-				if(!$user_url)
-					$user_url = "www.example.com";
-				
-				if(!$user_email)
-					$user_email = "example@mail.com";
-		
-				//this function here is generating a js array echoed to the page based on the option values for the logged in user this only relates for the default install of tikipress feilds the frist name and lastname feilds have been moved as the order is different from how they appear - this is why there is the +2 and -2 This is scrappy and will need to be fixed to work with custom feilds etc.
-					echo '<script> var arrValues=new Array("'.$twitter_id.'","'.$user_url.'","'.$user_email.'",';
-				for($j=0; $j < count($current_user_profile); $j++){
-					if($j == count($current_user_profile)-1)
-					echo '"'.$current_user_profile[2]['value'].'"';
-					elseif($j == count($current_user_profile)-2)
-					echo '"'.$current_user_profile[1]['value'].'",';
-					elseif($j == 1)
-					echo '"'.$current_user_profile[$j+2]['value'].'",';
-					elseif($j == 2)
-					echo '"'.$current_user_profile[$j+2]['value'].'",';
-					elseif($j == count($current_user_profile)-2)
-					echo '"'.$current_user_profile[1]['value'].'",';
-				else
-					echo '"'.$current_user_profile[$j+2]['value'].'",';
-				}
-				echo '); </script>';
-}
 
 
 /**

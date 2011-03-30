@@ -236,24 +236,11 @@ function LoadBadgesData($settings){
 		
 		
 	/* connect to gravatar to get the user site address, twitter id*/
-
-		$usermd5=md5( strtolower( trim( $user->user_email ) ) );	
-		$old_track = ini_set('track_errors', '1');
-		if(!$str = @file_get_contents( 'http://www.gravatar.com/'.$usermd5.'.php' ))
-			$profile=0;
-		else
-			$profile = unserialize( $str );
-		
-		ini_set('track_errors', $old_track);
-		//check if the users have a gravatar profile before trying to get their info
-		if ($profile != 'User not found'){
-			$user_url=($url)?$url:$profile['entry'][0]['urls'][0]['value'];
-				foreach((array)$profile['entry'][0]['accounts'] as $account){
-					if($account["domain"]=="twitter.com")
-						$twitter_id = $account["display"];
-				}
-		}
-		//$fields = $settings;
+	$grav_data = bpt_conect_to_gravatar($user_email);
+	$twitter_id = $grav_data['twitter'];
+	$user_url = $grav_data['site url'];
+	
+			//$fields = $settings;
 		$fields = $_POST['bpt']['fields'];
 
 		//remove excluded feilds from final array

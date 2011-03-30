@@ -129,9 +129,195 @@ register_column_headers( 'attendees' ,$columns ); ?>
 				</tr>
 			</tfoot>
 		</table>
-		</div>
+	</div>
 <?php
-		}
+}
+	
+		
+/**
+ * bpt_pdf_badge_dropdown_options
+ *
+ * @param array $all_fields, all buddypress profile fields and gravatar information collected at checkout
+ * @return select boxes relating to the template posistion
+ */		
+function bpt_pdf_badge_dropdown_options($all_fields){
+	
+	for($j=0; $j < count($all_fields); $j++){
+		
+		$select_id = 'Select'.($j+1) ;
+		$select_name = "bpt[fields][".$value."]"; ?>
+		<tr class="bpt_template_select_row"> <?php
+			//if we are accessing grav fields
+			if($j < 3){
+				echo '<td class="bpt_template_select">'.$all_fields[$j]['name'] . '</td>';
+				$value = $all_fields[$j]['id'];
+			}else{
+				echo '<td class="bpt_template_select">'.$all_fields[$j]->name . '</td>';
+				$value = $all_fields[$j]->id;
+			}
+			$select_name = "bpt[fields][".$value."]"; 
+			
+			?><td class="bpt_template_select"> 
+				<select id="<?php echo $select_id ?>" name="<?php echo $select_name ?>" onchange="javascript:SelectBoxes(this);">
+					<option value='exclude' selected='selected'>Exclude</option> <?php
+					//for each template posistion ($i) create that option will need to be not hard coded when more templates are added
+					for($i=1; $i < 8; $i++) 
+						echo '<option value="' . $i . '"> Template Area ' . $i . '</option>'; ?>
+				</select> 
+			</td>
+		</tr> <?php 
+	} 
+}
+
+
+/**
+ * generate_user_preview_data
+ *
+ * this function here is generating a js array echoed to the page based
+ * on the option values for the logged in user this only relates for the 
+ * default install of tikipress feilds the frist name and lastname feilds
+ * have been moved as the order is  *different from how they appear - this
+ * is why there is the +2 and -2 This is scrappy and will need to be fixed
+ * to work with custom feilds etc.
+ * 
+ * @todo tidy this messey for loop and include functionality for custom feilds
+ *
+ */	
+function generate_user_preview_data(){
+
+global $bp;
+//if current user not registered need to use first regerstees deets :)
+	$user_id = $bp->loggedin_user->id;
+	$current_user_profile = bpt_get_users_profile_data($user_id) ;
+	$user_email = $bp->loggedin_user->userdata->user_email;
+	$twitter_id = '';
+	$grav_data = bpt_conect_to_gravatar($user_email);
+	$twitter_id = $grav_data['twitter'];
+	$user_url = $grav_data['site url'];
+	
+	
+	if (!$twitter_id)
+		$twitter_id = "@Twitter";
+	
+	if(!$user_url)
+		$user_url = "www.example.com";
+	
+	if(!$user_email)
+		$user_email = "example@mail.com";
+	
+		echo '<script> var arrValues=new Array("'.$twitter_id.'","'.$user_url.'","'.$user_email.'",';
+	for($j=0; $j < count($current_user_profile); $j++){
+		if($j == count($current_user_profile)-1)
+		echo '"'.$current_user_profile[2]['value'].'"';
+		elseif($j == count($current_user_profile)-2)
+		echo '"'.$current_user_profile[1]['value'].'",';
+		elseif($j == 1)
+		echo '"'.$current_user_profile[$j+2]['value'].'",';
+		elseif($j == 2)
+		echo '"'.$current_user_profile[$j+2]['value'].'",';
+		elseif($j == count($current_user_profile)-2)
+		echo '"'.$current_user_profile[1]['value'].'",';
+	else
+		echo '"'.$current_user_profile[$j+2]['value'].'",';
+	}
+	echo '); </script>';
+}
+
+
+/**
+ * bpt_conect_to_gravatar
+ *
+ * @param string $user_email this is used to conect to graratar
+ * @return array containg the users twitter_id and url
+ *
+ * This function and array can be extended to extract more data from gravatar at the moment we only require the
+ * twitter information and url
+ */	
+ 
+function bpt_conect_to_gravatar($user_email){
+
+	$usermd5=md5( strtolower( trim( $user_email ) ) );	
+	$old_track = ini_set('track_errors', '1');
+	
+	if(!$str = @file_get_contents( 'http://www.gravatar.com/'.$usermd5.'.php' ))
+		$profile=0;
+	else
+		$profile = unserialize( $str );
+	
+	ini_set('track_errors', $old_track);
+	
+	//check if the users have a gravatar profile before trying to get their info
+	if ($profile != 'User not found'){
+		$user_url=($url)?$url:$profile['entry'][0]['urls'][0]['value'];
+			foreach((array)$profile['entry'][0]['accounts'] as $account){
+				if($account["domain"]=="twitter.com")
+					$twitter_id = $account["display"];
+			}
+			
+	$grav_data = array(
+		'twitter' => $twitter_id,
+		'site url' => $user_url
+		);
+			
+	return $grav_data;
+	}
+}
+
+/**
+ * bpt_preview_divs
+ *
+ * @return $html featuring div areas
+ * @todo make the classes dynamic for when future templates are added
+ *  The classes relate to the css style sheet posistion
+ *
+ * This function is generating the div areas over the preview template which
+ * the js populates with the users ticket details as they select their badge
+ * settings the div id numbers relate to the template posistion
+ */	
+function bpt_preview_divs(){
+
+	$html='<div class="show_avatar">';
+		$html.='<div id="show_avatar" class="" style="display: block">';
+	        $html.= get_avatar( $user_email , '50' ); 
+	     $html.='</div>';
+	$html.='</div>';
+	
+	$html.='<div class="area1_container">';
+	    $html.='<div id="1" class="area1" style="display: none">';
+	      $html.=' <strong></strong>';
+	    $html.='</div>';
+	$html.='</div>';
+	
+	$html.='<div class="area2_container">';
+	    $html.='<div id="2" class="area2" style="display: none"></div>';
+	$html.='</div>';
+	
+	$html.='<div class="area_container">';
+	   	 $html.='<div id="6" class="area6" style="display: none"></div>';
+	$html.='</div>';
+	
+	$html.='<div class="area3_container">';
+	    $html.='<div id="3" class="area3" style="display: none">';
+	       $html.='<strong></strong>';
+	   $html.='</div>';
+	$html.='</div>';
+	
+	$html.='<div class="area_container">';
+	    $html.='<div id="4" class="area4" style="display: none"></div>';
+	$html.='</div>';
+	
+	$html.='<div class="area_container">';
+	     $html.='<div id="5" class="area5" style="display: none">';
+	       $html.='<strong></strong>'; 
+	    $html.=' </div>';
+	$html.='</div>';
+	
+	$html.='<div class="area7_container">';
+		$html.=' <div id="7" class="area7" style="display: none"></div>';
+	$html.='</div>';
+	
+	return $html;
+}
 
 
 function get_file_by_curl( $file, $newfilename ) {
